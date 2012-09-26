@@ -37,6 +37,11 @@ bool tegra_all_cpus_booted;
 
 static DECLARE_BITMAP(tegra_cpu_init_bits, CONFIG_NR_CPUS) __read_mostly;
 const struct cpumask *const tegra_cpu_init_mask = to_cpumask(tegra_cpu_init_bits);
+
+#ifdef CONFIG_TEGRA_MPDECISION
+extern int mpdecision_gmode_notifier(void);
+#endif
+
 #define tegra_cpu_init_map	(*(cpumask_t *)tegra_cpu_init_mask)
 
 #define CLK_RST_CONTROLLER_CLK_CPU_CMPLX \
@@ -209,9 +214,19 @@ int boot_secondary(unsigned int cpu, struct task_struct *idle)
 			/* Early boot, clock infrastructure is not initialized
 			   - CPU mode switch is not allowed */
 			status = -EINVAL;
-		} else
+		} else {
+#ifndef CONFIG_TEGRA_MPDECISION
+			/* change to g mode */
 			status = clk_set_parent(cpu_clk, cpu_g_clk);
-
+#else
+                        /*
+                         * the above variant is now no longer preferred since
+                         * mpdecision would not know about this. Notify mpdecision
+                         * instead to switch to G mode
+                         */
+                        status = mpdecision_gmode_notifier();
+#endif
+		}
 		if (status)
 			goto done;
 	}
