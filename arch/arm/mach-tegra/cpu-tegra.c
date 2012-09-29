@@ -46,7 +46,7 @@
 
 #ifdef CONFIG_TEGRA_MPDECISION
 /* mpdecision notifier */
-extern void mpdecision_gmode_notifier(void);
+extern int mpdecision_gmode_notifier(void);
 #endif
 
 /* tegra throttling and edp governors require frequencies in the table
@@ -480,6 +480,7 @@ int tegra_update_cpu_speed(unsigned long rate)
 	int ret = 0;
 	struct cpufreq_freqs freqs;
         unsigned long rate_save = rate;
+        int status = 1;
 
 	freqs.old = tegra_getspeed(0);
 	freqs.new = rate;
@@ -505,7 +506,9 @@ int tegra_update_cpu_speed(unsigned long rate)
                          * mpdecision would not know about this. Notify mpdecision
                          * instead to switch to G mode
                          */
-                        (void) mpdecision_gmode_notifier();
+                        status = mpdecision_gmode_notifier();
+                        if (status == 0)
+                                pr_err("%s: couldn't switch to gmode (freq)", __func__ );
 #endif
 			/* restore the target frequency, and
 			 * let the rest of the function handle
