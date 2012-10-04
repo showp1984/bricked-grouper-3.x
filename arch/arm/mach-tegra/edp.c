@@ -25,6 +25,7 @@
 #include <mach/edp.h>
 
 #include "fuse.h"
+#include "tegra_pmqos.h"
 
 static const struct tegra_edp_limits *edp_limits;
 static int edp_limits_size;
@@ -323,10 +324,14 @@ static struct tegra_edp_limits edp_default_limits[] = {
 void __init tegra_init_cpu_edp_limits(unsigned int regulator_mA)
 {
 	int cpu_speedo_id = tegra_cpu_speedo_id();
+	int cpu_process_id = tegra_cpu_process_id();
 	int i, j;
 	struct tegra_edp_limits *e;
 	struct tegra_edp_entry *t = (struct tegra_edp_entry *)tegra_edp_map;
 	int tsize = sizeof(tegra_edp_map)/sizeof(struct tegra_edp_entry);
+#ifdef CONFIG_TEGRA3_VARIANT_CPU_OVERCLOCK
+	int boost0, boostx;
+#endif
 
 	if (!regulator_mA) {
 		edp_limits = edp_default_limits;
@@ -360,12 +365,40 @@ void __init tegra_init_cpu_edp_limits(unsigned int regulator_mA)
 		    GFP_KERNEL);
 	BUG_ON(!e);
 
+#ifdef CONFIG_TEGRA3_VARIANT_CPU_OVERCLOCK
+	switch (cpu_process_id) {
+		case 4:
+		case 3:
+		case 2:
+                case 1:
+		case 0:
+			boost0 = T3_VARIANT_BOOST0;
+			boostx = T3_VARIANT_BOOSTX;
+			break;
+		default:
+			boost0 = -10;
+			boostx = 0;
+			break;
+	}
+#endif
+
 	for (j = 0; j < edp_limits_size; j++) {
 		e[j].temperature = (int)t[i+j].temperature;
+#ifdef CONFIG_TEGRA3_VARIANT_CPU_OVERCLOCK
+		e[j].freq_limits[0] =
+			(unsigned int)(t[i+j].freq_limits[0]+boost0) * 10000;
+		e[j].freq_limits[1] =
+			(unsigned int)(t[i+j].freq_limits[1]+boostx) * 10000;
+		e[j].freq_limits[2] =
+			(unsigned int)(t[i+j].freq_limits[2]+boostx) * 10000;
+		e[j].freq_limits[3] =
+			(unsigned int)(t[i+j].freq_limits[3]+boostx) * 10000;
+#else
 		e[j].freq_limits[0] = (unsigned int)t[i+j].freq_limits[0] * 10000;
 		e[j].freq_limits[1] = (unsigned int)t[i+j].freq_limits[1] * 10000;
 		e[j].freq_limits[2] = (unsigned int)t[i+j].freq_limits[2] * 10000;
 		e[j].freq_limits[3] = (unsigned int)t[i+j].freq_limits[3] * 10000;
+#endif
 	}
 
 	if (edp_limits != edp_default_limits)

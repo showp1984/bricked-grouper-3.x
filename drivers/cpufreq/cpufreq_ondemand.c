@@ -32,6 +32,7 @@
 #endif
 
 #include "../../arch/arm/mach-tegra/pm.h"
+#include "../../arch/arm/mach-tegra/tegra_pmqos.h"
 
 /*
  * dbs is used in this file as a shortform for demandbased switching
@@ -1169,6 +1170,7 @@ static void cpufreq_governor_suspend(struct early_suspend *h)
 static void cpufreq_governor_resume(struct early_suspend *h)
 {
 	cpufreq_governor_screen = true;
+        Touch_poke_attr[0] = tegra_pmqos_boost_freq;
         dbs_tuners_ins.powersave_bias = saved_powersave_bias;
 }
 #endif
@@ -1179,6 +1181,7 @@ static int __init cpufreq_gov_dbs_init(void)
 	u64 idle_time;
 	int cpu = get_cpu();
 
+        Touch_poke_attr[0] = tegra_pmqos_boost_freq;
 	idle_time = get_cpu_idle_time_us(cpu, &wall);
 	put_cpu();
 	if (idle_time != -1ULL) {
