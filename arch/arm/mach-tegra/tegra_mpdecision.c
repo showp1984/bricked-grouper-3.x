@@ -48,14 +48,15 @@
 #define TEGRA_MPDEC_STARTDELAY            20000
 #define TEGRA_MPDEC_DELAY                 70
 #define TEGRA_MPDEC_PAUSE                 10000
+
+/* will be overwritten later by lpcpu max clock */
 #define TEGRA_MPDEC_IDLE_FREQ             475000
 
 /* This rq value will be used if we only have the lpcpu online */
 #define TEGRA_MPDEC_LPCPU_RQ_DOWN         36
 
 /*
- * This will replace TEGRA_MPDEC_DELAY in each case. Though the
- * values are identical do leave them here for future changes.
+ * This will replace TEGRA_MPDEC_DELAY in each case.
  */
 #define TEGRA_MPDEC_LPCPU_UPDELAY         70
 #define TEGRA_MPDEC_LPCPU_DOWNDELAY       2000
@@ -955,6 +956,9 @@ static int __init tegra_mpdec_init(void)
 
 	idle_top_freq = clk_get_max_rate(cpu_lp_clk) / 1000;
 	idle_bottom_freq = clk_get_min_rate(cpu_g_clk) / 1000;
+
+        /* overwrite idle frequency with lpcpu max clock */
+        tegra_mpdec_tuners_ins.idle_freq = idle_top_freq;
 
 	for_each_possible_cpu(cpu) {
 		mutex_init(&(per_cpu(tegra_mpdec_cpudata, cpu).suspend_mutex));
