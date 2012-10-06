@@ -68,6 +68,11 @@ struct tegra_otg_data {
 };
 static struct tegra_otg_data *tegra_clone;
 
+#ifdef CONFIG_USB_OTG_ON_CHARGING
+static bool tegra_otg_on_charging = false;
+module_param(tegra_otg_on_charging, bool, 0664);
+#endif
+
 static inline unsigned long otg_readl(struct tegra_otg_data *tegra,
 				      unsigned int offset)
 {
@@ -236,6 +241,15 @@ static void irq_work(struct work_struct *work)
 
 		// tmtmtm
         smb347_deep_sleep = 0;
+		if (tegra->charger_cb) {
+			if (tegra_otg_on_charging)
+				/* enable v_bus detection for charging */
+				tegra->detect_vbus = true;
+			else
+				/* enable OTG to supply internal power */
+				tegra->charger_cb(to, from, tegra->charger_cb_data);				
+		}
+
 		if (to == OTG_STATE_A_SUSPEND) {
 			if (from == OTG_STATE_A_HOST) {
 				if (tegra->charger_cb) {
