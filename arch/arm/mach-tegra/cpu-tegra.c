@@ -71,6 +71,106 @@ static bool force_policy_max;
 
 unsigned int tegra_pmqos_cap_freq = CAP_CPU_FREQ_MAX;
 
+#ifdef CONFIG_CMDLINE_OPTIONS
+/*
+ * start cmdline_khz
+ */
+
+/* to be safe, fill vars with defaults */
+uint32_t cmdline_minkhz = T3_CPU_MIN_FREQ;
+
+#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_PERFORMANCE
+char cmdline_gov[CPUFREQ_NAME_LEN] = "performance";
+#endif
+#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_POWERSAVE
+char cmdline_gov[CPUFREQ_NAME_LEN] = "powersave";
+#endif
+#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_USERSPACE
+char cmdline_gov[CPUFREQ_NAME_LEN] = "userspace";
+#endif
+#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_ONDEMAND
+char cmdline_gov[CPUFREQ_NAME_LEN] = "ondemand";
+#endif
+#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_CONSERVATIVE
+char cmdline_gov[CPUFREQ_NAME_LEN] = "conservative";
+#endif
+#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_INTERACTIVE
+char cmdline_gov[CPUFREQ_NAME_LEN] = "interactive";
+#endif
+
+/* only override the governor 4 times, when
+ * initially bringing up cpufreq on the cpus */
+int cmdline_gov_cnt = 4;
+
+static int __init cpufreq_read_maxkhz_cmdline(char *maxkhz)
+{
+	unsigned long ui_khz;
+	int err;
+
+	err = strict_strtoul(maxkhz, 0, &ui_khz);
+	if (err) {
+		printk(KERN_INFO "[cmdline_khz_max]: ERROR while converting! using default value!");
+		printk(KERN_INFO "[cmdline_khz_max]: maxkhz='%i'\n", tegra_pmqos_boost_freq);
+		return 1;
+	}
+
+        tegra_pmqos_boost_freq = ui_khz;
+        printk(KERN_INFO "[cmdline_khz_max]: maxkhz='%u'\n", tegra_pmqos_boost_freq);
+        return 1;
+}
+__setup("maxkhz=", cpufreq_read_maxkhz_cmdline);
+
+static int __init cpufreq_read_minkhz_cmdline(char *minkhz)
+{
+	unsigned long ui_khz;
+	int err;
+
+	err = strict_strtoul(minkhz, 0, &ui_khz);
+	if (err) {
+		cmdline_minkhz = T3_CPU_MIN_FREQ;
+		printk(KERN_INFO "[cmdline_khz_min]: ERROR while converting! using default value!");
+		printk(KERN_INFO "[cmdline_khz_min]: minkhz='%i'\n", cmdline_minkhz);
+		return 1;
+	}
+
+        cmdline_minkhz = ui_khz;
+        printk(KERN_INFO "[cmdline_khz_min]: minkhz='%u'\n", cmdline_minkhz);
+        return 1;
+}
+__setup("minkhz=", cpufreq_read_minkhz_cmdline);
+
+static int __init cpufreq_read_gov_cmdline(char *gov)
+{
+	if (gov) {
+		strcpy(cmdline_gov, gov);
+		printk(KERN_INFO "[cmdline_gov]: Governor will be set to '%s'", cmdline_gov);
+	} else {
+		printk(KERN_INFO "[cmdline_gov]: No input found.");
+	}
+	return 1;
+}
+__setup("gov=", cpufreq_read_gov_cmdline);
+
+static int __init cpufreq_read_maxscroff_cmdline(char *maxscroff)
+{
+	unsigned long ui_khz;
+	int err;
+
+	err = strict_strtoul(maxscroff, 0, &ui_khz);
+	if (err) {
+		printk(KERN_INFO "[cmdline_maxscroff]: ERROR while converting! using default value!");
+		printk(KERN_INFO "[cmdline_maxscroff]: maxscroff='%i'\n", tegra_pmqos_cap_freq);
+		return 1;
+	}
+
+        tegra_pmqos_cap_freq = ui_khz;
+        printk(KERN_INFO "[cmdline_maxscroff]: maxscroff='%u'\n", tegra_pmqos_cap_freq);
+        return 1;
+}
+__setup("maxscroff=", cpufreq_read_maxscroff_cmdline);
+/* end cmdline_khz */
+#endif
+
 static int force_policy_max_set(const char *arg, const struct kernel_param *kp)
 {
 	int ret;
@@ -744,7 +844,11 @@ static int tegra_cpu_init(struct cpufreq_policy *policy)
 
 	if (policy->cpu == 0) {
                 policy->max = tegra_pmqos_boost_freq;
+#ifdef CONFIG_CMDLINE_OPTIONS
+                policy->min = cmdline_minkhz;
+#else
                 policy->min = T3_CPU_MIN_FREQ;
+#endif
 		register_pm_notifier(&tegra_cpu_pm_notifier);
 	}
 
