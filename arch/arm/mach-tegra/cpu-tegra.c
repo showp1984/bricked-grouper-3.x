@@ -743,11 +743,13 @@ static int tegra_cpu_init(struct cpufreq_policy *policy)
 	cpumask_copy(policy->related_cpus, cpu_possible_mask);
 
 	if (policy->cpu == 0) {
+                policy->max = tegra_pmqos_boost_freq;
+                policy->min = T3_CPU_MIN_FREQ;
 		register_pm_notifier(&tegra_cpu_pm_notifier);
 	}
 
         /* restore saved cpu frequency */
-        if (!is_lp_cluster()) {
+        if (policy->cpu > 0) {
                 policy->max = tegra_pmqos_boost_freq;
                 tegra_update_cpu_speed(tegra_pmqos_boost_freq);
                 pr_info("cpu-tegra_cpufreq: restored cpu[%d]'s freq: %u\n", policy->cpu, policy->max);
