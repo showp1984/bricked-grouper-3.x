@@ -330,7 +330,7 @@ void __init tegra_init_cpu_edp_limits(unsigned int regulator_mA)
 	struct tegra_edp_entry *t = (struct tegra_edp_entry *)tegra_edp_map;
 	int tsize = sizeof(tegra_edp_map)/sizeof(struct tegra_edp_entry);
 #ifdef CONFIG_TEGRA3_VARIANT_CPU_OVERCLOCK
-	int boost0, boostx;
+	int edpboost;
 #endif
 
 	if (!regulator_mA) {
@@ -372,12 +372,10 @@ void __init tegra_init_cpu_edp_limits(unsigned int regulator_mA)
 		case 2:
                 case 1:
 		case 0:
-			boost0 = T3_VARIANT_BOOST0;
-			boostx = T3_VARIANT_BOOSTX;
+			edpboost = T3_EDP_BOOST;
 			break;
 		default:
-			boost0 = -10;
-			boostx = 0;
+			edpboost = 0;
 			break;
 	}
 #endif
@@ -386,13 +384,13 @@ void __init tegra_init_cpu_edp_limits(unsigned int regulator_mA)
 		e[j].temperature = (int)t[i+j].temperature;
 #ifdef CONFIG_TEGRA3_VARIANT_CPU_OVERCLOCK
 		e[j].freq_limits[0] =
-			(unsigned int)(t[i+j].freq_limits[0]+boost0) * 10000;
+			(unsigned int)(t[i+j].freq_limits[0]+edpboost) * 10000;
 		e[j].freq_limits[1] =
-			(unsigned int)(t[i+j].freq_limits[1]+boostx) * 10000;
+			(unsigned int)(t[i+j].freq_limits[1]+edpboost) * 10000;
 		e[j].freq_limits[2] =
-			(unsigned int)(t[i+j].freq_limits[2]+boostx) * 10000;
+			(unsigned int)(t[i+j].freq_limits[2]+edpboost) * 10000;
 		e[j].freq_limits[3] =
-			(unsigned int)(t[i+j].freq_limits[3]+boostx) * 10000;
+			(unsigned int)(t[i+j].freq_limits[3]+edpboost) * 10000;
 #else
 		e[j].freq_limits[0] = (unsigned int)t[i+j].freq_limits[0] * 10000;
 		e[j].freq_limits[1] = (unsigned int)t[i+j].freq_limits[1] * 10000;

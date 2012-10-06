@@ -11,6 +11,7 @@
  *      -cleaned since oc was reworked (Dennis Rassmann)
  *      -added comment for T3_VARIANT_BOOST (Dennis Rassmann)
  *      -adapted for grouper (Dennis Rassmann)
+ *      -removed distinction between 0boost and xboost
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -30,8 +31,7 @@
 /* in 10 MHz
  * this effectively makes all tablets 1600Mhz capable, but is limited by
  * the clock definitions in tegra_dvfs.c */
-#define T3_VARIANT_BOOSTX       30
-#define T3_VARIANT_BOOST0       20
+#define T3_EDP_BOOST       30
 
 extern unsigned int tegra_pmqos_boost_freq;
 extern unsigned int tegra_pmqos_cap_freq;
