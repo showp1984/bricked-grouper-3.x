@@ -24,6 +24,12 @@
 #define MAX_DVFS_FREQS	18
 #define DVFS_RAIL_STATS_TOP_BIN	40
 
+#ifdef CONFIG_CMDLINE_OPTIONS
+/* cmdline_gpu vars&functions */
+extern unsigned int cmdline_gpuoc;
+extern int tegra_dvfs_set_gpuoc(int gpuoc_val);
+#endif
+
 struct clk;
 struct dvfs_rail;
 
