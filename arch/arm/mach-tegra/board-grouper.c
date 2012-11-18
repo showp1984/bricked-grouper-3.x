@@ -646,7 +646,7 @@ static struct i2c_board_info elan_i2c_devices[] = {
         {
                 I2C_BOARD_INFO(ELAN_KTF3K_NAME, 0x10),
                 .platform_data = &ts_elan_ktf3k_data,
-                .irq = (INT_GPIO_BASE + TEGRA_GPIO_PH4),
+                .irq = TEGRA_GPIO_TO_IRQ(TEGRA_GPIO_PH4),
         },
 
 };
