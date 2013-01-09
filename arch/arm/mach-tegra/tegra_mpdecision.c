@@ -573,12 +573,13 @@ static void tegra_mpdec_early_suspend(struct early_suspend *h)
         /* main work thread can sleep now */
         cancel_delayed_work_sync(&tegra_mpdec_work);
 
-        if (!is_lp_cluster())
-                if(!tegra_lp_cpu_handler(true, false)) {
+        if ((lp_possible()) && (!is_lp_cluster())) {
+                if(!tegra_lp_cpu_handler(true, false))
                         pr_err(MPDEC_TAG"CPU[LP] error, cannot power up.\n");
-                        queue_delayed_work(tegra_mpdec_suspended_workq, &tegra_mpdec_suspended_work,
-                                           TEGRA_MPDEC_LPCPU_UPDELAY);
-                }
+        } else if (!is_lp_cluster()) {
+                queue_delayed_work(tegra_mpdec_suspended_workq, &tegra_mpdec_suspended_work,
+                                   TEGRA_MPDEC_LPCPU_UPDELAY);
+        }
 	pr_info(MPDEC_TAG"Screen -> off. Deactivated mpdecision.\n");
 }
 
