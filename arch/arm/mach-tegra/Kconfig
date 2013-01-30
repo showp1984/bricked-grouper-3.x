@@ -574,4 +574,11 @@ config GROUPER_HARDBOOT_RECOVERY
 	help
 	  Reboot with the recovery kernel since the boot kernel decompressor may
 	  not support the hardboot jump.
+
+config USBHOST
+	bool "USBHOST related runtime configuration"
+	default y
+	help
+	  A simple sysfs interface to allow switching between OTG and FI mode.
+
 endif
