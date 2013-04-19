@@ -336,6 +336,7 @@ static int tegra_lp_cpu_handler(bool state, bool notifier)
                         tegra_mpdec_lpcpudata.online = false;
 						tegra_mpdec_lpcpudata.times_cpu_unplugged += 1;
 						tegra_mpdec_lpcpudata.on_time_total += on_time;
+						per_cpu(tegra_mpdec_cpudata, 0).on_time = ktime_to_ms(ktime_get());
 						per_cpu(tegra_mpdec_cpudata, 0).times_cpu_hotplugged += 1;
 
                         /* was this called because the freq is too high for the lpcpu? */
@@ -1052,6 +1053,7 @@ static int __init tegra_mpdec_init(void)
 		per_cpu(tegra_mpdec_cpudata, cpu).times_cpu_unplugged = 0;
 		per_cpu(tegra_mpdec_cpudata, cpu).times_cpu_hotplugged = 0;
 	}
+	per_cpu(tegra_mpdec_cpudata, 0).on_time = ktime_to_ms(ktime_get());
 	tegra_mpdec_lpcpudata.on_time_total = 0;
 	tegra_mpdec_lpcpudata.times_cpu_hotplugged = 0;
 	tegra_mpdec_lpcpudata.times_cpu_unplugged = 0;
