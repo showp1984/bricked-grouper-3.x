@@ -84,6 +84,9 @@ struct tegra_mpdec_cpudata_t {
 	int online;
 	int device_suspended;
 	cputime64_t on_time;
+	cputime64_t on_time_total;
+	long long unsigned int times_cpu_hotplugged;
+	long long unsigned int times_cpu_unplugged;
 };
 static DEFINE_PER_CPU(struct tegra_mpdec_cpudata_t, tegra_mpdec_cpudata);
 static struct tegra_mpdec_cpudata_t tegra_mpdec_lpcpudata;
@@ -427,13 +430,13 @@ static void tegra_mpdec_work_thread(struct work_struct *work)
 	if (ktime_to_ms(ktime_get()) <= tegra_mpdec_tuners_ins.startdelay)
 		goto out;
 
-		/* Check if we are paused */
-		if (mpdec_paused_until >= ktime_to_ms(ktime_get()))
-			goto out;
+	/* Check if we are paused */
+	if (mpdec_paused_until >= ktime_to_ms(ktime_get()))
+		goto out;
 
-        for_each_possible_cpu(cpu)
-	        if ((per_cpu(tegra_mpdec_cpudata, cpu).device_suspended == true))
-                        suspended = true;
+    for_each_possible_cpu(cpu)
+        if ((per_cpu(tegra_mpdec_cpudata, cpu).device_suspended == true))
+                    suspended = true;
 
 	if (suspended == true)
 		goto out;
