@@ -318,6 +318,10 @@ static int tegra_lp_cpu_handler(bool state, bool notifier)
                                 cpu_online(1), cpu_online(2), cpu_online(3));
                         tegra_mpdec_lpcpudata.on_time = ktime_to_ms(ktime_get());
                         tegra_mpdec_lpcpudata.online = true;
+						tegra_mpdec_lpcpudata.times_cpu_hotplugged += 1;
+						on_time = ktime_to_ms(ktime_get()) - per_cpu(tegra_mpdec_cpudata, 0).on_time;
+						per_cpu(tegra_mpdec_cpudata, 0).on_time_total += on_time;
+						per_cpu(tegra_mpdec_cpudata, 0).times_cpu_unplugged += 1;
                 } else {
                         pr_err(MPDEC_TAG" %s (up): clk_set_parent fail\n", __func__);
                         err = true;
@@ -330,6 +334,9 @@ static int tegra_lp_cpu_handler(bool state, bool notifier)
 
                         on_time = ktime_to_ms(ktime_get()) - tegra_mpdec_lpcpudata.on_time;
                         tegra_mpdec_lpcpudata.online = false;
+						tegra_mpdec_lpcpudata.times_cpu_unplugged += 1;
+						tegra_mpdec_lpcpudata.on_time_total += on_time;
+						per_cpu(tegra_mpdec_cpudata, 0).times_cpu_hotplugged += 1;
 
                         /* was this called because the freq is too high for the lpcpu? */
                         if (!notifier)
@@ -475,6 +482,8 @@ static void tegra_mpdec_work_thread(struct work_struct *work)
                                 cpu_down(cpu);
                                 per_cpu(tegra_mpdec_cpudata, cpu).online = false;
                                 on_time = ktime_to_ms(ktime_get()) - per_cpu(tegra_mpdec_cpudata, cpu).on_time;
+                                per_cpu(tegra_mpdec_cpudata, cpu).on_time_total += on_time;
+                                per_cpu(tegra_mpdec_cpudata, cpu).times_cpu_unplugged += 1;
                                 pr_info(MPDEC_TAG"CPU[%d] on->off | Mask=[%d.%d%d%d%d] | time on: %llu\n",
                                         cpu, is_lp_cluster(), ((is_lp_cluster() == 1) ? 0 : cpu_online(0)),
                                         cpu_online(1), cpu_online(2), cpu_online(3), on_time);
@@ -495,6 +504,7 @@ static void tegra_mpdec_work_thread(struct work_struct *work)
                                 cpu_up(cpu);
                                 per_cpu(tegra_mpdec_cpudata, cpu).online = true;
                                 per_cpu(tegra_mpdec_cpudata, cpu).on_time = ktime_to_ms(ktime_get());
+								per_cpu(tegra_mpdec_cpudata, cpu).times_cpu_hotplugged += 1;
                                 pr_info(MPDEC_TAG"CPU[%d] off->on | Mask=[%d.%d%d%d%d]\n",
                                         cpu, is_lp_cluster(), ((is_lp_cluster() == 1) ? 0 : cpu_online(0)),
                                         cpu_online(1), cpu_online(2), cpu_online(3));
@@ -564,6 +574,7 @@ out:
 static void tegra_mpdec_early_suspend(struct early_suspend *h)
 {
 	int cpu = nr_cpu_ids;
+	cputime64_t on_time = 0;
         /* power down all cpus except 0 and switch to lp mode */
 	for_each_possible_cpu(cpu) {
 		mutex_lock(&per_cpu(tegra_mpdec_cpudata, cpu).suspend_mutex);
@@ -573,6 +584,9 @@ static void tegra_mpdec_early_suspend(struct early_suspend *h)
                                 cpu, is_lp_cluster(), ((is_lp_cluster() == 1) ? 0 : cpu_online(0)),
                                 cpu_online(1), cpu_online(2), cpu_online(3));
 			per_cpu(tegra_mpdec_cpudata, cpu).online = false;
+			on_time = ktime_to_ms(ktime_get()) - per_cpu(tegra_mpdec_cpudata, cpu).on_time;
+			per_cpu(tegra_mpdec_cpudata, cpu).on_time_total += on_time;
+			per_cpu(tegra_mpdec_cpudata, cpu).times_cpu_unplugged += 1;
 		}
 		per_cpu(tegra_mpdec_cpudata, cpu).device_suspended = true;
 		mutex_unlock(&per_cpu(tegra_mpdec_cpudata, cpu).suspend_mutex);
@@ -886,6 +900,7 @@ static ssize_t store_enabled(struct kobject *a, struct attribute *b,
                         if (!cpu_online(cpu)) {
                                 per_cpu(tegra_mpdec_cpudata, cpu).on_time = ktime_to_ms(ktime_get());
                                 per_cpu(tegra_mpdec_cpudata, cpu).online = true;
+								per_cpu(tegra_mpdec_cpudata, cpu).times_cpu_hotplugged += 1;
                                 cpu_up(cpu);
                                 pr_info(MPDEC_TAG"nap time... Hot plugged CPU[%d] | Mask=[%d.%d%d%d%d]\n",
                                         cpu, is_lp_cluster(), ((is_lp_cluster() == 1) ? 0 : cpu_online(0)),
@@ -950,6 +965,66 @@ static struct attribute_group tegra_mpdec_attr_group = {
 	.attrs = tegra_mpdec_attributes,
 	.name = "conf",
 };
+
+/********* STATS START *********/
+
+static ssize_t show_time_cpus_on(struct kobject *a, struct attribute *b,
+				   char *buf)
+{
+	ssize_t len = 0;
+	int cpu = 0;
+
+	len += sprintf(buf + len, "LP %llu\n", tegra_mpdec_lpcpudata.on_time_total);
+	for_each_possible_cpu(cpu) {
+		len += sprintf(buf + len, "%i %llu\n", cpu, per_cpu(tegra_mpdec_cpudata, cpu).on_time_total);
+	}
+
+	return len;
+}
+define_one_global_ro(time_cpus_on);
+
+static ssize_t show_times_cpus_hotplugged(struct kobject *a, struct attribute *b,
+				   char *buf)
+{
+	ssize_t len = 0;
+	int cpu = 0;
+
+	len += sprintf(buf + len, "LP %llu\n", tegra_mpdec_lpcpudata.times_cpu_hotplugged);
+	for_each_possible_cpu(cpu) {
+		len += sprintf(buf + len, "%i %llu\n", cpu, per_cpu(tegra_mpdec_cpudata, cpu).times_cpu_hotplugged);
+	}
+
+	return len;
+}
+define_one_global_ro(times_cpus_hotplugged);
+
+static ssize_t show_times_cpus_unplugged(struct kobject *a, struct attribute *b,
+				   char *buf)
+{
+	ssize_t len = 0;
+	int cpu = 0;
+
+	len += sprintf(buf + len, "LP %llu\n", tegra_mpdec_lpcpudata.times_cpu_unplugged);
+	for_each_possible_cpu(cpu) {
+		len += sprintf(buf + len, "%i %llu\n", cpu, per_cpu(tegra_mpdec_cpudata, cpu).times_cpu_unplugged);
+	}
+
+	return len;
+}
+define_one_global_ro(times_cpus_unplugged);
+
+static struct attribute *tegra_mpdec_stats_attributes[] = {
+	&time_cpus_on.attr,
+	&times_cpus_hotplugged.attr,
+	&times_cpus_unplugged.attr,
+	NULL
+};
+
+
+static struct attribute_group tegra_mpdec_stats_attr_group = {
+	.attrs = tegra_mpdec_stats_attributes,
+	.name = "stats",
+};
 /**************************** SYSFS END ****************************/
 
 static int __init tegra_mpdec_init(void)
@@ -973,7 +1048,13 @@ static int __init tegra_mpdec_init(void)
 		mutex_init(&(per_cpu(tegra_mpdec_cpudata, cpu).suspend_mutex));
 		per_cpu(tegra_mpdec_cpudata, cpu).device_suspended = false;
 		per_cpu(tegra_mpdec_cpudata, cpu).online = true;
+		per_cpu(tegra_mpdec_cpudata, cpu).on_time_total = 0;
+		per_cpu(tegra_mpdec_cpudata, cpu).times_cpu_unplugged = 0;
+		per_cpu(tegra_mpdec_cpudata, cpu).times_cpu_hotplugged = 0;
 	}
+	tegra_mpdec_lpcpudata.on_time_total = 0;
+	tegra_mpdec_lpcpudata.times_cpu_hotplugged = 0;
+	tegra_mpdec_lpcpudata.times_cpu_unplugged = 0;
 
         was_paused = true;
 
@@ -1002,6 +1083,11 @@ static int __init tegra_mpdec_init(void)
 							&tegra_mpdec_attr_group);
 		if (rc) {
 			pr_warn(MPDEC_TAG"sysfs: ERROR, could not create sysfs group");
+		}
+		rc = sysfs_create_group(tegra_mpdec_kobject,
+							&tegra_mpdec_stats_attr_group);
+		if (rc) {
+			pr_warn(MPDEC_TAG"sysfs: ERROR, could not create sysfs stats group");
 		}
 	} else
 		pr_warn(MPDEC_TAG"sysfs: ERROR, could not create sysfs kobj");
