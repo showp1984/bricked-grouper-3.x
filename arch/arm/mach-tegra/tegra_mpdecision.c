@@ -956,9 +956,21 @@ static ssize_t show_time_cpus_on(struct kobject *a, struct attribute *b,
     ssize_t len = 0;
     int cpu = 0;
 
-    len += sprintf(buf + len, "LP %llu\n", tegra_mpdec_lpcpudata.on_time_total);
+    if (is_lp_cluster() == 1) {
+        len += sprintf(buf + len, "LP %llu\n",
+                       (tegra_mpdec_lpcpudata.on_time_total +
+                        (ktime_to_ms(ktime_get()) -
+                         tegra_mpdec_lpcpudata.on_time)));
+    } else
+        len += sprintf(buf + len, "LP %llu\n", tegra_mpdec_lpcpudata.on_time_total);
     for_each_possible_cpu(cpu) {
-        len += sprintf(buf + len, "%i %llu\n", cpu, per_cpu(tegra_mpdec_cpudata, cpu).on_time_total);
+        if (cpu_online(cpu) && (is_lp_cluster() == 0)) {
+            len += sprintf(buf + len, "%i %llu\n", cpu,
+                           (per_cpu(tegra_mpdec_cpudata, cpu).on_time_total +
+                            (ktime_to_ms(ktime_get()) -
+                            per_cpu(tegra_mpdec_cpudata, cpu).on_time)));
+        } else
+            len += sprintf(buf + len, "%i %llu\n", cpu, per_cpu(tegra_mpdec_cpudata, cpu).on_time_total);
     }
 
     return len;
