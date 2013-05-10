@@ -1,5 +1,5 @@
 /*
- * arch/arm/mach-tegra/tegra_pmqos.h
+ * include/linux/tegra_minmax_cpufreq.h
  *
  * Copyright (C) 2013 Dennis Rassmann <showp1984@gmail.com>
  *

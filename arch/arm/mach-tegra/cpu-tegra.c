@@ -121,7 +121,8 @@ static int __init cpufreq_read_maxkhz_cmdline(char *maxkhz)
 
     cmdline_maxkhz = true;
 
-    for_each_present_cpu(cpu) {
+    /* we can't use for_each_present_cpu here, the cpus are not yet there */
+    for (cpu=0; cpu<CONFIG_NR_CPUS; cpu++) {
         per_cpu(tegra_cpu_max_freq, cpu) = ui_khz;
     }
 
@@ -144,7 +145,8 @@ static int __init cpufreq_read_minkhz_cmdline(char *minkhz)
 
     cmdline_minkhz = true;
 
-    for_each_present_cpu(cpu) {
+    /* we can't use for_each_present_cpu here, the cpus are not yet there */
+    for (cpu=0; cpu<CONFIG_NR_CPUS; cpu++) {
         per_cpu(tegra_cpu_min_freq, cpu) = ui_khz;
     }
 
@@ -858,7 +860,7 @@ static int tegra_cpu_init(struct cpufreq_policy *policy)
 
     policy->max = per_cpu(tegra_cpu_max_freq, policy->cpu);
     policy->min = per_cpu(tegra_cpu_min_freq, policy->cpu);
-    tegra_update_cpu_speed(per_cpu(tegra_cpu_max_freq, policy->cpu));
+    tegra_update_cpu_speed(policy->max);
 
 	if (policy->cpu == 0) {
 		register_pm_notifier(&tegra_cpu_pm_notifier);
@@ -930,6 +932,7 @@ static void tegra_cpufreq_late_resume(struct early_suspend *h)
 static int __init tegra_cpufreq_init(void)
 {
 	int ret = 0;
+	struct tegra_cpufreq_table_data *table_data = tegra_cpufreq_table_get();
 
     /* init cpu min/max defaults */
     int cpu;
@@ -944,8 +947,6 @@ static int __init tegra_cpufreq_init(void)
             per_cpu(tegra_cpu_max_freq, cpu) = CONFIG_TEGRA_CPU_FREQ_MAX;
     }
 
-	struct tegra_cpufreq_table_data *table_data =
-		tegra_cpufreq_table_get();
 	if (IS_ERR_OR_NULL(table_data))
 		return -EINVAL;
 
