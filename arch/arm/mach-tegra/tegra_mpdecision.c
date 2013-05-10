@@ -37,6 +37,7 @@
 #include <asm-generic/cputime.h>
 #include <linux/hrtimer.h>
 #include <linux/delay.h>
+#include <linux/tegra_minmax_cpufreq.h>
 #ifdef CONFIG_TEGRA_MPDECISION_INPUTBOOST_CPUMIN
 #include <linux/input.h>
 #include <linux/slab.h>
@@ -1434,7 +1435,7 @@ static int __init tegra_mpdec_init(void) {
         per_cpu(tegra_mpdec_cpudata, cpu).times_cpu_unplugged = 0;
         per_cpu(tegra_mpdec_cpudata, cpu).times_cpu_hotplugged = 0;
 #ifdef CONFIG_TEGRA_MPDECISION_INPUTBOOST_CPUMIN
-        per_cpu(tegra_mpdec_cpudata, cpu).norm_min_freq = cmdline_minkhz;
+        per_cpu(tegra_mpdec_cpudata, cpu).norm_min_freq = per_cpu(tegra_cpu_min_freq, cpu);
         switch (cpu) {
             case 0:
             case 1:

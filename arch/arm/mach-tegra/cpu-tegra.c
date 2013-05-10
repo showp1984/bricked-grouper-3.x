@@ -33,6 +33,7 @@
 #include <linux/suspend.h>
 #include <linux/debugfs.h>
 #include <linux/cpu.h>
+#include <linux/tegra_minmax_cpufreq.h>
 
 #include <linux/pm_qos_params.h>
 #ifdef CONFIG_HAS_EARLYSUSPEND
@@ -48,6 +49,10 @@
 #include "dvfs.h"
 #include "pm.h"
 #include "tegra_pmqos.h"
+
+/* create variables to hold our min/max speeds */
+DEFINE_PER_CPU(unsigned long int, tegra_cpu_min_freq);
+DEFINE_PER_CPU(unsigned long int, tegra_cpu_max_freq);
 
 #ifdef CONFIG_TEGRA_MPDECISION
 /* mpdecision notifier */
@@ -77,8 +82,6 @@ unsigned int tegra_pmqos_cap_freq = CAP_CPU_FREQ_MAX;
  */
 
 /* to be safe, fill vars with defaults */
-uint32_t cmdline_minkhz = T3_CPU_MIN_FREQ;
-
 #ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_PERFORMANCE
 char cmdline_gov[CPUFREQ_NAME_LEN] = "performance";
 #endif
@@ -105,37 +108,42 @@ int cmdline_gov_cnt = 4;
 static int __init cpufreq_read_maxkhz_cmdline(char *maxkhz)
 {
 	unsigned long ui_khz;
-	int err;
+	int err, cpu;
 
 	err = strict_strtoul(maxkhz, 0, &ui_khz);
 	if (err) {
 		printk(KERN_INFO "[cmdline_khz_max]: ERROR while converting! using default value!");
-		printk(KERN_INFO "[cmdline_khz_max]: maxkhz='%i'\n", tegra_pmqos_boost_freq);
+		printk(KERN_INFO "[cmdline_khz_max]: maxkhz='%lu'\n", per_cpu(tegra_cpu_max_freq, 0));
 		return 1;
 	}
 
-        tegra_pmqos_boost_freq = ui_khz;
-        printk(KERN_INFO "[cmdline_khz_max]: maxkhz='%u'\n", tegra_pmqos_boost_freq);
-        return 1;
+    for_each_present_cpu(cpu) {
+        per_cpu(tegra_cpu_max_freq, cpu) = ui_khz;
+    }
+
+    printk(KERN_INFO "[cmdline_khz_max]: maxkhz='%lu'\n", per_cpu(tegra_cpu_max_freq, 0));
+    return 1;
 }
 __setup("maxkhz=", cpufreq_read_maxkhz_cmdline);
 
 static int __init cpufreq_read_minkhz_cmdline(char *minkhz)
 {
 	unsigned long ui_khz;
-	int err;
+	int err, cpu;
 
 	err = strict_strtoul(minkhz, 0, &ui_khz);
 	if (err) {
-		cmdline_minkhz = T3_CPU_MIN_FREQ;
 		printk(KERN_INFO "[cmdline_khz_min]: ERROR while converting! using default value!");
-		printk(KERN_INFO "[cmdline_khz_min]: minkhz='%i'\n", cmdline_minkhz);
+		printk(KERN_INFO "[cmdline_khz_min]: minkhz='%lu'\n", per_cpu(tegra_cpu_min_freq, 0));
 		return 1;
 	}
 
-        cmdline_minkhz = ui_khz;
-        printk(KERN_INFO "[cmdline_khz_min]: minkhz='%u'\n", cmdline_minkhz);
-        return 1;
+    for_each_present_cpu(cpu) {
+        per_cpu(tegra_cpu_min_freq, cpu) = ui_khz;
+    }
+
+    printk(KERN_INFO "[cmdline_khz_min]: minkhz='%lu'\n", per_cpu(tegra_cpu_min_freq, 0));
+    return 1;
 }
 __setup("minkhz=", cpufreq_read_minkhz_cmdline);
 
@@ -842,22 +850,13 @@ static int tegra_cpu_init(struct cpufreq_policy *policy)
 	policy->shared_type = CPUFREQ_SHARED_TYPE_ALL;
 	cpumask_copy(policy->related_cpus, cpu_possible_mask);
 
+    policy->max = per_cpu(tegra_cpu_max_freq, policy->cpu);
+    policy->min = per_cpu(tegra_cpu_min_freq, policy->cpu);
+    tegra_update_cpu_speed(per_cpu(tegra_cpu_max_freq, policy->cpu));
+
 	if (policy->cpu == 0) {
-                policy->max = tegra_pmqos_boost_freq;
-#ifdef CONFIG_CMDLINE_OPTIONS
-                policy->min = cmdline_minkhz;
-#else
-                policy->min = T3_CPU_MIN_FREQ;
-#endif
 		register_pm_notifier(&tegra_cpu_pm_notifier);
 	}
-
-        /* restore saved cpu frequency */
-        if (policy->cpu > 0) {
-                policy->max = tegra_pmqos_boost_freq;
-                tegra_update_cpu_speed(tegra_pmqos_boost_freq);
-                pr_info("cpu-tegra_cpufreq: restored cpu[%d]'s freq: %u\n", policy->cpu, policy->max);
-        }
 
 	return 0;
 }

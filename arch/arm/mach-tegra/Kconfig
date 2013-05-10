@@ -402,6 +402,23 @@ config TEGRA_AUTO_HOTPLUG
 	  high/low power CPU clusters automatically, corresponding to
 	  CPU frequency scaling.
 
+config TEGRA_CPU_FREQ_SET_MIN_MAX
+	bool "Set Min/Max CPU frequencies."
+	default n
+	help
+	  Allow setting min and max CPU frequencies. Sysfs can be used
+	  to override these values.
+
+config TEGRA_CPU_FREQ_MAX
+	int "Max CPU Frequency"
+	depends on TEGRA_CPU_FREQ_SET_MIN_MAX
+	default 1200000
+
+config TEGRA_CPU_FREQ_MIN
+	int "Min CPU Frequency"
+	depends on TEGRA_CPU_FREQ_SET_MIN_MAX
+	default 102000
+
 config TEGRA_MC_EARLY_ACK
 	bool "Enable early acknowledgement from mermory controller"
 	depends on ARCH_TEGRA_3x_SOC

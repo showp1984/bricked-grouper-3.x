@@ -30,6 +30,7 @@
 #include <linux/mutex.h>
 #include <linux/syscore_ops.h>
 #include <linux/pm_qos_params.h>
+#include <linux/tegra_minmax_cpufreq.h>
 
 #include <trace/events/power.h>
 
@@ -397,7 +398,31 @@ static ssize_t store_##file_name					\
 	return ret ? ret : count;					\
 }
 
+#ifndef CONFIG_TEGRA3_VARIANT_CPU_OVERCLOCK
 store_one(scaling_min_freq, min);
+#else
+static ssize_t store_scaling_min_freq(struct cpufreq_policy *policy,
+                                       const char *buf, size_t count)
+{
+         unsigned int ret = -EINVAL;
+         struct cpufreq_policy new_policy;
+
+         ret = cpufreq_get_policy(&new_policy, policy->cpu);
+         if (ret)
+                 return -EINVAL;
+
+         ret = sscanf(buf, "%u", &new_policy.min);
+         if (ret != 1)
+                 return -EINVAL;
+         per_cpu(tegra_cpu_min_freq, policy->cpu) = new_policy.min;
+
+         ret = __cpufreq_set_policy(policy, &new_policy);
+         policy->user_policy.min = new_policy.min;
+
+         return ret ? ret : count;
+}
+#endif
+
 #ifndef CONFIG_TEGRA3_VARIANT_CPU_OVERCLOCK
 store_one(scaling_max_freq, max);
 #else
@@ -414,7 +439,7 @@ static ssize_t store_scaling_max_freq(struct cpufreq_policy *policy,
          ret = sscanf(buf, "%u", &new_policy.max);
          if (ret != 1)
                  return -EINVAL;
-         tegra_pmqos_boost_freq = new_policy.max;
+         per_cpu(tegra_cpu_max_freq, policy->cpu) = new_policy.max;
 
          ret = __cpufreq_set_policy(policy, &new_policy);
          policy->user_policy.max = new_policy.max;
