@@ -378,13 +378,20 @@ config CMDLINE_OPTIONS
 	  maxscroff=<VALUEinKHZ> commands from the kernels cmdline.
 
 config TEGRA_MPDECISION
-        bool "Enable better automatic CPU hot-plugging"
+	bool "Enable better automatic CPU hot-plugging"
 	depends on HOTPLUG_CPU && CPU_FREQ && !ARCH_CPU_PROBE_RELEASE && !ARCH_TEGRA_2x_SOC
 	default y
 	help
 	  This option enables turning CPUs off/on and switching tegra
 	  high/low power CPU clusters automatically, corresponding to
 	  CPU frequency load.
+
+config TEGRA_MPDECISION_INPUTBOOST_CPUMIN
+	bool "Enable kernel based mpdecision"
+	depends on TEGRA_MPDECISION
+	default n
+	help
+	  This pushes the cpu min speed to predefined values on input events.
 
 config TEGRA_AUTO_HOTPLUG
 	bool "Enable automatic CPU hot-plugging"
