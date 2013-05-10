@@ -1434,7 +1434,7 @@ static int __init tegra_mpdec_init(void) {
         per_cpu(tegra_mpdec_cpudata, cpu).times_cpu_unplugged = 0;
         per_cpu(tegra_mpdec_cpudata, cpu).times_cpu_hotplugged = 0;
 #ifdef CONFIG_TEGRA_MPDECISION_INPUTBOOST_CPUMIN
-        per_cpu(tegra_mpdec_cpudata, cpu).norm_min_freq = 102000;
+        per_cpu(tegra_mpdec_cpudata, cpu).norm_min_freq = cmdline_minkhz;
         switch (cpu) {
             case 0:
             case 1:
