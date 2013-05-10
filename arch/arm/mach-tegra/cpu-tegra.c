@@ -81,6 +81,8 @@ unsigned int tegra_pmqos_cap_freq = CAP_CPU_FREQ_MAX;
  * start cmdline_khz
  */
 
+bool cmdline_minkhz = false, cmdline_maxkhz = false;
+
 /* to be safe, fill vars with defaults */
 #ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_PERFORMANCE
 char cmdline_gov[CPUFREQ_NAME_LEN] = "performance";
@@ -117,6 +119,8 @@ static int __init cpufreq_read_maxkhz_cmdline(char *maxkhz)
 		return 1;
 	}
 
+    cmdline_maxkhz = true;
+
     for_each_present_cpu(cpu) {
         per_cpu(tegra_cpu_max_freq, cpu) = ui_khz;
     }
@@ -137,6 +141,8 @@ static int __init cpufreq_read_minkhz_cmdline(char *minkhz)
 		printk(KERN_INFO "[cmdline_khz_min]: minkhz='%lu'\n", per_cpu(tegra_cpu_min_freq, 0));
 		return 1;
 	}
+
+    cmdline_minkhz = true;
 
     for_each_present_cpu(cpu) {
         per_cpu(tegra_cpu_min_freq, cpu) = ui_khz;
@@ -924,6 +930,19 @@ static void tegra_cpufreq_late_resume(struct early_suspend *h)
 static int __init tegra_cpufreq_init(void)
 {
 	int ret = 0;
+
+    /* init cpu min/max defaults */
+    int cpu;
+    for_each_present_cpu(cpu) {
+#ifdef CONFIG_CMDLINE_OPTIONS
+        if (!cmdline_minkhz)
+#endif
+            per_cpu(tegra_cpu_min_freq, cpu) = CONFIG_TEGRA_CPU_FREQ_MIN;
+#ifdef CONFIG_CMDLINE_OPTIONS
+        if (!cmdline_maxkhz)
+#endif
+            per_cpu(tegra_cpu_max_freq, cpu) = CONFIG_TEGRA_CPU_FREQ_MAX;
+    }
 
 	struct tegra_cpufreq_table_data *table_data =
 		tegra_cpufreq_table_get();
