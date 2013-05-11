@@ -434,11 +434,13 @@ static int snd_usb_audio_create(struct usb_device *dev, int idx,
 }
 
 //tmtmtm
-static void mykthread(void *unused)
+static int mykthread(void *unused)
 {
 	printk("##### sound/usb/card.c mykthread driver_attach\n");
 	if(postpone_usb_snd_drv!=NULL)
     	driver_attach(postpone_usb_snd_drv); // drives/base/dd.c
+
+    return 0;
 }
 static void delayed_func(unsigned long unused)
 {
