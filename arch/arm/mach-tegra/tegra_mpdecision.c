@@ -1272,7 +1272,13 @@ static ssize_t store_boost_freqs(struct kobject *a, struct attribute *b,
         }
     }
     sscanf(chz, "%lu", &hz);
+
+    /* if this cpu is currently boosted, unboost */
+    unboost_cpu(cpu);
+
+    /* update boost freq */
     per_cpu(tegra_mpdec_cpudata, cpu).boost_freq = hz;
+
     return count;
 }
 define_one_global_rw(boost_freqs);
