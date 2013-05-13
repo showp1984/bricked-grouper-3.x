@@ -47,21 +47,21 @@
 #include "cpu-tegra.h"
 #include "pm.h"
 
-#define DEBUG 0
+#define DEBUG                               0
 
-#define MPDEC_TAG                       "[MPDEC]: "
-#define TEGRA_MPDEC_STARTDELAY            20000
-#define TEGRA_MPDEC_DELAY                 130
-#define TEGRA_MPDEC_PAUSE                 10000
+#define MPDEC_TAG                           "[MPDEC]: "
+#define TEGRA_MPDEC_STARTDELAY              20000
+#define TEGRA_MPDEC_DELAY                   130
+#define TEGRA_MPDEC_PAUSE                   10000
 
 /* will be overwritten later by lpcpu max clock */
-#define TEGRA_MPDEC_IDLE_FREQ             475000
+#define TEGRA_MPDEC_IDLE_FREQ               475000
 
 /* This rq value will be used if we only have the lpcpu online */
-#define TEGRA_MPDEC_LPCPU_RQ_DOWN         36
+#define TEGRA_MPDEC_LPCPU_RQ_DOWN           36
 
 /* This will be used to schedule lpcpu checks in suspend */
-#define TEGRA_MPDEC_LPCPU_CHECK_DELAY     200
+#define TEGRA_MPDEC_LPCPU_CHECK_DELAY       200
 
 /*
  * LPCPU hysteresis default values
@@ -69,15 +69,15 @@
  * we need at least 3 requests to come out of lpmode.
  * This does not affect frequency overrides
  */
-#define TEGRA_MPDEC_LPCPU_UP_HYS        4
-#define TEGRA_MPDEC_LPCPU_DOWN_HYS      2
+#define TEGRA_MPDEC_LPCPU_UP_HYS            4
+#define TEGRA_MPDEC_LPCPU_DOWN_HYS          2
 
 #ifdef CONFIG_TEGRA_MPDECISION_INPUTBOOST_CPUMIN
-#define TEGRA_MPDEC_BOOSTTIME             1000
-#define TEGRA_MPDEC_BOOSTFREQ_CPU0        910000
-#define TEGRA_MPDEC_BOOSTFREQ_CPU1        910000
-#define TEGRA_MPDEC_BOOSTFREQ_CPU2        760000
-#define TEGRA_MPDEC_BOOSTFREQ_CPU3        620000
+#define TEGRA_MPDEC_BOOSTTIME               1000
+#define TEGRA_MPDEC_BOOSTFREQ_CPU0          910000
+#define TEGRA_MPDEC_BOOSTFREQ_CPU1          910000
+#define TEGRA_MPDEC_BOOSTFREQ_CPU2          760000
+#define TEGRA_MPDEC_BOOSTFREQ_CPU3          620000
 #endif
 
 enum {
