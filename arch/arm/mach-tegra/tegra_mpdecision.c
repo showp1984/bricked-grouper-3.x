@@ -60,11 +60,8 @@
 /* This rq value will be used if we only have the lpcpu online */
 #define TEGRA_MPDEC_LPCPU_RQ_DOWN         36
 
-/*
- * This will replace TEGRA_MPDEC_DELAY in each case.
- */
-#define TEGRA_MPDEC_LPCPU_UPDELAY         130
-#define TEGRA_MPDEC_LPCPU_DOWNDELAY       2000
+/* This will be used to schedule lpcpu checks in suspend */
+#define TEGRA_MPDEC_LPCPU_CHECK_DELAY     200
 
 /*
  * LPCPU hysteresis default values
@@ -444,14 +441,7 @@ int mpdecision_gmode_notifier(void) {
         /* if we are suspended, start lp checks */
         if ((per_cpu(tegra_mpdec_cpudata, 0).device_suspended == true)) {
             queue_delayed_work(tegra_mpdec_suspended_workq, &tegra_mpdec_suspended_work,
-                               TEGRA_MPDEC_LPCPU_UPDELAY);
-        } else {
-            /* we need to update the delay of the main workqueue here
-             * with the original delay. Otherwise it may happen that the
-             * lpcpu will jump on/off in < set delay intervals
-             */
-            mod_delayed_work(tegra_mpdec_workq, &tegra_mpdec_work,
-                               msecs_to_jiffies(TEGRA_MPDEC_LPCPU_DOWNDELAY));
+                               TEGRA_MPDEC_LPCPU_CHECK_DELAY);
         }
     } else {
         pr_err(MPDEC_TAG"CPU[LP] error, cannot power down.\n");
@@ -610,21 +600,8 @@ static void tegra_mpdec_work_thread(struct work_struct *work) {
 
 out:
     if (state != TEGRA_MPDEC_DISABLED) {
-        /* This is being used if the lpcpu up/down delay values are different
-         * than the default mpdecision delay. */
-        switch (state) {
-        case TEGRA_MPDEC_LPCPU_DOWN:
-            queue_delayed_work(tegra_mpdec_workq, &tegra_mpdec_work,
-                               msecs_to_jiffies(TEGRA_MPDEC_LPCPU_DOWNDELAY));
-            break;
-        case TEGRA_MPDEC_LPCPU_UP:
-                queue_delayed_work(tegra_mpdec_workq, &tegra_mpdec_work,
-                                   msecs_to_jiffies(TEGRA_MPDEC_LPCPU_UPDELAY));
-            break;
-        default:
-            queue_delayed_work(tegra_mpdec_workq, &tegra_mpdec_work,
-                               msecs_to_jiffies(tegra_mpdec_tuners_ins.delay));
-        }
+        queue_delayed_work(tegra_mpdec_workq, &tegra_mpdec_work,
+                           msecs_to_jiffies(tegra_mpdec_tuners_ins.delay));
     }
     return;
 }
@@ -845,7 +822,7 @@ static void tegra_mpdec_early_suspend(struct early_suspend *h) {
             pr_err(MPDEC_TAG"CPU[LP] error, cannot power up.\n");
     } else if (!is_lp_cluster()) {
         queue_delayed_work(tegra_mpdec_suspended_workq, &tegra_mpdec_suspended_work,
-                           TEGRA_MPDEC_LPCPU_UPDELAY);
+                           TEGRA_MPDEC_LPCPU_CHECK_DELAY);
     }
     pr_info(MPDEC_TAG"Screen -> off. Deactivated mpdecision.\n");
 }
