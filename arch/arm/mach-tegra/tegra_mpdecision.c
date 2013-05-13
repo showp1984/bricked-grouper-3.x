@@ -446,13 +446,11 @@ int mpdecision_gmode_notifier(void) {
             queue_delayed_work(tegra_mpdec_suspended_workq, &tegra_mpdec_suspended_work,
                                TEGRA_MPDEC_LPCPU_UPDELAY);
         } else {
-            /* we need to cancel the main workqueue here and restart it
-             * with the original delay again. Otherwise it may happen
-             * that the lpcpu will jump on/off in < set delay intervals
+            /* we need to update the delay of the main workqueue here
+             * with the original delay. Otherwise it may happen that the
+             * lpcpu will jump on/off in < set delay intervals
              */
-            cancel_delayed_work_sync(&tegra_mpdec_work);
-            was_paused = true;
-            queue_delayed_work(tegra_mpdec_workq, &tegra_mpdec_work,
+            mod_delayed_work(tegra_mpdec_workq, &tegra_mpdec_work,
                                msecs_to_jiffies(TEGRA_MPDEC_LPCPU_DOWNDELAY));
         }
     } else {
