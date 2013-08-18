@@ -1006,7 +1006,7 @@ int tegra_dvfs_set_gpuoc(int gpuoc_val)
 
                                 } else if (gpuoc_val == 1) {
                                         WRITE_CORE_DVFS("vde",    0, 1, KHZ)
-                                        WRITE_CORE_DVFS_FREQS(1, 228000, 275000, 332000, 380000,  416000,  446000,  484000,  484000)
+                                        WRITE_CORE_DVFS_FREQS(1, 228000, 275000, 332000, 416000,  484000,  484000,  484000,  484000)
                                 } else if (gpuoc_val == 2) {
                                         WRITE_CORE_DVFS("vde",    0, 1, KHZ)
                                         WRITE_CORE_DVFS_FREQS(1, 247000, 304000, 400000, 484000,  520000,  520000,  520000,  520000)
@@ -1022,7 +1022,7 @@ int tegra_dvfs_set_gpuoc(int gpuoc_val)
                                         WRITE_CORE_DVFS_FREQS(1, 234000, 285000, 332000, 380000,  416000,  416000,  416000,  416000)
                                 } else if (gpuoc_val == 1) {
                                         WRITE_CORE_DVFS("mpe",    0, 1, KHZ)
-                                        WRITE_CORE_DVFS_FREQS(1, 234000, 285000, 332000, 380000,  416000,  446000,  484000,  484000)
+                                        WRITE_CORE_DVFS_FREQS(1, 234000, 285000, 332000, 416000,  484000,  484000,  484000,  484000)
                                 } else if (gpuoc_val == 2) {
                                         WRITE_CORE_DVFS("mpe",    0, 1, KHZ)
                                         WRITE_CORE_DVFS_FREQS(1, 247000, 304000, 400000, 484000,  520000,  520000,  520000,  520000)
@@ -1038,7 +1038,7 @@ int tegra_dvfs_set_gpuoc(int gpuoc_val)
                                         WRITE_CORE_DVFS_FREQS(1, 267000, 285000, 332000, 380000,  416000,  416000,  416000,  416000)
                                 } else if (gpuoc_val == 1) {
                                         WRITE_CORE_DVFS("2d",     0, 1, KHZ)
-                                        WRITE_CORE_DVFS_FREQS(1, 267000, 285000, 332000, 380000,  416000,  446000,  484000,  484000)
+                                        WRITE_CORE_DVFS_FREQS(1, 267000, 285000, 332000, 416000,  484000,  484000,  484000,  484000)
                                 } else if (gpuoc_val == 2) {
                                         WRITE_CORE_DVFS("2d",     0, 1, KHZ)
                                         WRITE_CORE_DVFS_FREQS(1, 247000, 304000, 400000, 484000,  520000,  520000,  520000,  520000)
@@ -1054,7 +1054,7 @@ int tegra_dvfs_set_gpuoc(int gpuoc_val)
                                         WRITE_CORE_DVFS_FREQS(1, 267000, 285000, 332000, 380000,  416000,  416000,  416000,  416000)
                                 } else if (gpuoc_val == 1) {
                                         WRITE_CORE_DVFS("epp",    0, 1, KHZ)
-                                        WRITE_CORE_DVFS_FREQS(1, 267000, 285000, 332000, 380000,  416000,  446000,  484000,  484000)
+                                        WRITE_CORE_DVFS_FREQS(1, 267000, 285000, 332000, 416000,  484000,  484000,  484000,  484000)
                                 } else if (gpuoc_val == 2) {
                                         WRITE_CORE_DVFS("epp",    0, 1, KHZ)
                                         WRITE_CORE_DVFS_FREQS(1, 247000, 304000, 400000, 484000,  520000,  520000,  520000,  520000)
@@ -1070,7 +1070,7 @@ int tegra_dvfs_set_gpuoc(int gpuoc_val)
                                         WRITE_CORE_DVFS_FREQS(1, 234000, 285000, 332000, 380000,  416000,  416000,  416000,  416000)
                                 } else if (gpuoc_val == 1) {
                                         WRITE_CORE_DVFS("3d",     0, 1, KHZ)
-                                        WRITE_CORE_DVFS_FREQS(1, 234000, 285000, 332000, 380000,  416000,  446000,  484000,  484000)
+                                        WRITE_CORE_DVFS_FREQS(1, 234000, 285000, 332000, 416000,  484000,  484000,  484000,  484000)
                                 } else if (gpuoc_val == 2) {
                                         WRITE_CORE_DVFS("3d",     0, 1, KHZ)
                                         WRITE_CORE_DVFS_FREQS(1, 247000, 304000, 400000, 484000,  520000,  520000,  520000,  520000)
@@ -1086,7 +1086,7 @@ int tegra_dvfs_set_gpuoc(int gpuoc_val)
                                         WRITE_CORE_DVFS_FREQS(1, 234000, 285000, 332000, 380000,  416000,  416000,  416000,  416000)
                                 } else if (gpuoc_val == 1) {
                                         WRITE_CORE_DVFS("3d2",    0, 1, KHZ)
-                                        WRITE_CORE_DVFS_FREQS(1, 234000, 285000, 332000, 380000,  416000,  446000,  484000,  484000)
+                                        WRITE_CORE_DVFS_FREQS(1, 234000, 285000, 332000, 416000,  484000,  484000,  484000,  484000)
                                 } else if (gpuoc_val == 2) {
                                         WRITE_CORE_DVFS("3d2",    0, 1, KHZ)
                                         WRITE_CORE_DVFS_FREQS(1, 247000, 304000, 400000, 484000,  520000,  520000,  520000,  520000)
@@ -1102,7 +1102,7 @@ int tegra_dvfs_set_gpuoc(int gpuoc_val)
                                         WRITE_CORE_DVFS_FREQS(1, 267000, 285000, 332000, 380000,  416000,  416000,  416000,  416000)
                                 } else if (gpuoc_val == 1) {
                                         WRITE_CORE_DVFS("se",     0, 1, KHZ)
-                                        WRITE_CORE_DVFS_FREQS(1, 267000, 285000, 332000, 380000,  416000,  446000,  484000,  484000)
+                                        WRITE_CORE_DVFS_FREQS(1, 267000, 285000, 332000, 416000,  484000,  484000,  484000,  484000)
                                 } else if (gpuoc_val == 2) {
                                         WRITE_CORE_DVFS("se",     0, 1, KHZ)
                                         WRITE_CORE_DVFS_FREQS(1, 247000, 304000, 400000, 484000,  520000,  520000,  520000,  520000)
@@ -1118,7 +1118,7 @@ int tegra_dvfs_set_gpuoc(int gpuoc_val)
                                         WRITE_CORE_DVFS_FREQS(1, 228000, 275000, 332000, 380000,  416000,  416000,  416000,  416000)
                                 } else if (gpuoc_val == 1) {
                                         WRITE_CORE_DVFS("cbus",     0, 1, KHZ)
-                                        WRITE_CORE_DVFS_FREQS(1, 228000, 275000, 332000, 380000,  416000,  446000,  484000,  484000)
+                                        WRITE_CORE_DVFS_FREQS(1, 228000, 275000, 332000, 416000,  484000,  484000,  484000,  484000)
                                 } else if (gpuoc_val == 2) {
                                         WRITE_CORE_DVFS("cbus",     0, 1, KHZ)
                                         WRITE_CORE_DVFS_FREQS(1, 247000, 304000, 400000, 484000,  520000,  520000,  520000,  520000)
@@ -1138,7 +1138,7 @@ int tegra_dvfs_set_gpuoc(int gpuoc_val)
 
                                 } else if (gpuoc_val == 1) {
                                         WRITE_CORE_DVFS("vde",    1, 1, KHZ)
-                                        WRITE_CORE_DVFS_FREQS(1, 228000, 275000, 332000, 380000,  416000,  446000,  484000,  484000)
+                                        WRITE_CORE_DVFS_FREQS(1, 228000, 275000, 332000, 416000,  484000,  484000,  484000,  484000)
                                 } else if (gpuoc_val == 2) {
                                         WRITE_CORE_DVFS("vde",    1, 1, KHZ)
                                         WRITE_CORE_DVFS_FREQS(1, 247000, 304000, 400000, 484000,  520000,  520000,  520000,  520000)
@@ -1154,7 +1154,7 @@ int tegra_dvfs_set_gpuoc(int gpuoc_val)
                                         WRITE_CORE_DVFS_FREQS(1, 234000, 285000, 332000, 380000,  416000,  416000,  416000,  416000)
                                 } else if (gpuoc_val == 1) {
                                         WRITE_CORE_DVFS("mpe",    1, 1, KHZ)
-                                        WRITE_CORE_DVFS_FREQS(1, 234000, 285000, 332000, 380000,  416000,  446000,  484000,  484000)
+                                        WRITE_CORE_DVFS_FREQS(1, 234000, 285000, 332000, 416000,  484000,  484000,  484000,  484000)
                                 } else if (gpuoc_val == 2) {
                                         WRITE_CORE_DVFS("mpe",    1, 1, KHZ)
                                         WRITE_CORE_DVFS_FREQS(1, 247000, 304000, 400000, 484000,  520000,  520000,  520000,  520000)
@@ -1170,7 +1170,7 @@ int tegra_dvfs_set_gpuoc(int gpuoc_val)
                                         WRITE_CORE_DVFS_FREQS(1, 267000, 285000, 332000, 380000,  416000,  416000,  416000,  416000)
                                 } else if (gpuoc_val == 1) {
                                         WRITE_CORE_DVFS("2d",     1, 1, KHZ)
-                                        WRITE_CORE_DVFS_FREQS(1, 267000, 285000, 332000, 380000,  416000,  446000,  484000,  484000)
+                                        WRITE_CORE_DVFS_FREQS(1, 267000, 285000, 332000, 416000,  484000,  484000,  484000,  484000)
                                 } else if (gpuoc_val == 2) {
                                         WRITE_CORE_DVFS("2d",     1, 1, KHZ)
                                         WRITE_CORE_DVFS_FREQS(1, 247000, 304000, 400000, 484000,  520000,  520000,  520000,  520000)
@@ -1186,7 +1186,7 @@ int tegra_dvfs_set_gpuoc(int gpuoc_val)
                                         WRITE_CORE_DVFS_FREQS(1, 267000, 285000, 332000, 380000,  416000,  416000,  416000,  416000)
                                 } else if (gpuoc_val == 1) {
                                         WRITE_CORE_DVFS("epp",    1, 1, KHZ)
-                                        WRITE_CORE_DVFS_FREQS(1, 267000, 285000, 332000, 380000,  416000,  446000,  484000,  484000)
+                                        WRITE_CORE_DVFS_FREQS(1, 267000, 285000, 332000, 416000,  484000,  484000,  484000,  484000)
                                 } else if (gpuoc_val == 2) {
                                         WRITE_CORE_DVFS("epp",    1, 1, KHZ)
                                         WRITE_CORE_DVFS_FREQS(1, 247000, 304000, 400000, 484000,  520000,  520000,  520000,  520000)
@@ -1202,7 +1202,7 @@ int tegra_dvfs_set_gpuoc(int gpuoc_val)
                                         WRITE_CORE_DVFS_FREQS(1, 234000, 285000, 332000, 380000,  416000,  416000,  416000,  416000)
                                 } else if (gpuoc_val == 1) {
                                         WRITE_CORE_DVFS("3d",     1, 1, KHZ)
-                                        WRITE_CORE_DVFS_FREQS(1, 234000, 285000, 332000, 380000,  416000,  446000,  484000,  484000)
+                                        WRITE_CORE_DVFS_FREQS(1, 234000, 285000, 332000, 416000,  484000,  484000,  484000,  484000)
                                 } else if (gpuoc_val == 2) {
                                         WRITE_CORE_DVFS("3d",     1, 1, KHZ)
                                         WRITE_CORE_DVFS_FREQS(1, 247000, 304000, 400000, 484000,  520000,  520000,  520000,  520000)
@@ -1218,7 +1218,7 @@ int tegra_dvfs_set_gpuoc(int gpuoc_val)
                                         WRITE_CORE_DVFS_FREQS(1, 234000, 285000, 332000, 380000,  416000,  416000,  416000,  416000)
                                 } else if (gpuoc_val == 1) {
                                         WRITE_CORE_DVFS("3d2",    1, 1, KHZ)
-                                        WRITE_CORE_DVFS_FREQS(1, 234000, 285000, 332000, 380000,  416000,  446000,  484000,  484000)
+                                        WRITE_CORE_DVFS_FREQS(1, 234000, 285000, 332000, 416000,  484000,  484000,  484000,  484000)
                                 } else if (gpuoc_val == 2) {
                                         WRITE_CORE_DVFS("3d2",    1, 1, KHZ)
                                         WRITE_CORE_DVFS_FREQS(1, 247000, 304000, 400000, 484000,  520000,  520000,  520000,  520000)
@@ -1234,7 +1234,7 @@ int tegra_dvfs_set_gpuoc(int gpuoc_val)
                                         WRITE_CORE_DVFS_FREQS(1, 267000, 285000, 332000, 380000,  416000,  416000,  416000,  416000)
                                 } else if (gpuoc_val == 1) {
                                         WRITE_CORE_DVFS("se",     1, 1, KHZ)
-                                        WRITE_CORE_DVFS_FREQS(1, 267000, 285000, 332000, 380000,  416000,  446000,  484000,  484000)
+                                        WRITE_CORE_DVFS_FREQS(1, 267000, 285000, 332000, 416000,  484000,  484000,  484000,  484000)
                                 } else if (gpuoc_val == 2) {
                                         WRITE_CORE_DVFS("se",     1, 1, KHZ)
                                         WRITE_CORE_DVFS_FREQS(1, 247000, 304000, 400000, 484000,  520000,  520000,  520000,  520000)
@@ -1250,7 +1250,7 @@ int tegra_dvfs_set_gpuoc(int gpuoc_val)
                                         WRITE_CORE_DVFS_FREQS(1, 228000, 275000, 332000, 380000,  416000,  416000,  416000,  416000)
                                 } else if (gpuoc_val == 1) {
                                         WRITE_CORE_DVFS("cbus",     1, 1, KHZ)
-                                        WRITE_CORE_DVFS_FREQS(1, 228000, 275000, 332000, 380000,  416000,  446000,  484000,  484000)
+                                        WRITE_CORE_DVFS_FREQS(1, 228000, 275000, 332000, 416000,  484000,  484000,  484000,  484000)
                                 } else if (gpuoc_val == 2) {
                                         WRITE_CORE_DVFS("cbus",     1, 1, KHZ)
                                         WRITE_CORE_DVFS_FREQS(1, 247000, 304000, 400000, 484000,  520000,  520000,  520000,  520000)
