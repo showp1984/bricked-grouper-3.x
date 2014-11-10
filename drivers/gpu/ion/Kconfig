@@ -1,6 +1,7 @@
 menuconfig ION
 	tristate "Ion Memory Manager"
 	select GENERIC_ALLOCATOR
+	select ION_IOMMU
 	help
 	  Chose this option to enable the ION Memory Manager.
 
