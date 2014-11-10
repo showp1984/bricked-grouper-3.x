@@ -276,11 +276,11 @@ void ion_carveout_free(struct ion_heap *heap, ion_phys_addr_t addr,
 struct ion_heap *ion_iommu_heap_create(struct ion_platform_heap *);
 void ion_iommu_heap_destroy(struct ion_heap *);
 #else
-static inline struct ion_heap *ion_iommu_heap_create(struct ion_platform_heap *)
+static inline struct ion_heap *ion_iommu_heap_create(struct ion_platform_heap *parameter)
 {
 	return NULL;
 }
-static inline void ion_iommu_heap_destroy(struct ion_heap *)
+static inline void ion_iommu_heap_destroy(struct ion_heap *parameter)
 {
 }
 #endif
