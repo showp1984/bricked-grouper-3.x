@@ -78,10 +78,6 @@ else
         echo "Creating directory $OUT_DIR/kernel...";
         mkdir $OUT_DIR/kernel
     fi
-    if [ ! -d "$OUT_DIR/modules" ]; then
-        echo "Creating directory $OUT_DIR/modules...";
-        mkdir $OUT_DIR/modules
-    fi
 fi
 
 ###CCACHE CONFIGURATION STARTS HERE, DO NOT MESS WITH IT!!!
