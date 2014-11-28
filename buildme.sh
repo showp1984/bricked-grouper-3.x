@@ -188,9 +188,9 @@ echo "[BUILD]: Changing CONFIG_LOCALVERSION to: -bricked-"$CODENAME"-"$BRANCH" .
 sed -i "/CONFIG_LOCALVERSION=\"/c\CONFIG_LOCALVERSION=\"-bricked-"$CODENAME"-"$BRANCH"\"" .config
 
 #kcontrol necessities
-if [ $(cat .config | grep 'CONFIG_ARCH_MSM=y' | tail -n1) == "CONFIG_ARCH_MSM=y" ]; then
+if [[ $(cat .config | grep 'CONFIG_ARCH_MSM=y' | tail -n1) == "CONFIG_ARCH_MSM=y" ]]; then
     DEVARCH="msm";
-elif [ $(cat .config | grep 'CONFIG_ARCH_TEGRA=y' | tail -n1) == "CONFIG_ARCH_TEGRA=y" ]; then
+elif [[ $(cat .config | grep 'CONFIG_ARCH_TEGRA=y' | tail -n1) == "CONFIG_ARCH_TEGRA=y" ]]; then
     DEVARCH="tegra";
 fi
 gotokcontrol() {
