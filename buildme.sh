@@ -251,8 +251,8 @@ if [[ ! $OUT_ENABLED -eq 0 ]]; then
     #copy stuff for our zip
     echo "[BUILD]: Copying kernel (zImage) to $OUT_DIR/kernel/...";
     cp arch/arm/boot/zImage $OUT_DIR/kernel/zImage
-    echo "[BUILD]: Copying modules (*.ko) to $OUT_DIR/modules/...";
-    find $SOURCE_DIR/ -name \*.ko -exec cp '{}' $OUT_DIR/modules/ ';'
+    echo "[BUILD]: Copying modules (*.ko) to $OUT_DIR/system/lib/modules/...";
+    find $SOURCE_DIR/ -name \*.ko -exec cp '{}' $OUT_DIR/system/lib/modules/ ';'
     echo "[BUILD]: Done!...";
 
     gotoout
