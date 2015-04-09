@@ -46,9 +46,16 @@ modules.builtin
 /Module.symvers
 
 #
-# KControl modules directory
+# KControl modules directory (make deb-pkg)
 #
 /kcontrol/
+
+#
+# build-stuff
+#
+/out/
+/toolch/
+/prebuilt/
 
 #
 # Debian directory (make deb-pkg)

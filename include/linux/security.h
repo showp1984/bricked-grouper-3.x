@@ -36,6 +36,7 @@
 #include <linux/key.h>
 #include <linux/xfrm.h>
 #include <linux/slab.h>
+#include <linux/xattr.h>
 #include <net/flow.h>
 
 /* Maximum number of letters for an LSM name string */
@@ -147,6 +148,10 @@ extern int mmap_min_addr_handler(struct ctl_table *table, int write,
 				 void __user *buffer, size_t *lenp, loff_t *ppos);
 #endif
 
+/* security_inode_init_security callback function to write xattrs */
+typedef int (*initxattrs) (struct inode *inode,
+			   const struct xattr *xattr_array, void *fs_data);
+
 #ifdef CONFIG_SECURITY
 
 struct security_mnt_opts {
@@ -181,7 +186,7 @@ static inline void security_free_mnt_opts(struct security_mnt_opts *opts)
  * Security module identifier.
  *
  * @name:
- *	A string that acts as a unique identifeir for the LSM with max number
+ *	A string that acts as a unique identifier for the LSM with max number
  *	of characters = SECURITY_NAME_MAX.
  *
  * Security hooks for program execution operations.
@@ -270,7 +275,7 @@ static inline void security_free_mnt_opts(struct security_mnt_opts *opts)
  *	@copy copied data which will be passed to the security module.
  *	Returns 0 if the copy was successful.
  * @sb_remount:
- *	Extracts security system specifc mount options and verifys no changes
+ *	Extracts security system specific mount options and verifies no changes
  *	are being made to those options.
  *	@sb superblock being remounted
  *	@data contains the filesystem-specific data.
@@ -375,15 +380,15 @@ static inline void security_free_mnt_opts(struct security_mnt_opts *opts)
  *	Return 0 if permission is granted.
  * @inode_mkdir:
  *	Check permissions to create a new directory in the existing directory
- *	associated with inode strcture @dir.
- *	@dir containst the inode structure of parent of the directory to be created.
+ *	associated with inode structure @dir.
+ *	@dir contains the inode structure of parent of the directory to be created.
  *	@dentry contains the dentry structure of new directory.
  *	@mode contains the mode of new directory.
  *	Return 0 if permission is granted.
  * @path_mkdir:
  *	Check permissions to create a new directory in the existing directory
- *	associated with path strcture @path.
- *	@dir containst the path structure of parent of the directory
+ *	associated with path structure @path.
+ *	@dir contains the path structure of parent of the directory
  *	to be created.
  *	@dentry contains the dentry structure of new directory.
  *	@mode contains the mode of new directory.
@@ -573,7 +578,7 @@ static inline void security_free_mnt_opts(struct security_mnt_opts *opts)
  *	@file contains the file structure.
  *	@cmd contains the operation to perform.
  *	@arg contains the operational arguments.
- *	Check permission for an ioctl operation on @file.  Note that @arg can
+ *	Check permission for an ioctl operation on @file.  Note that @arg
  *	sometimes represents a user space pointer; in other cases, it may be a
  *	simple integer value.  When @arg represents a user space pointer, it
  *	should never be used by the security module.
@@ -585,6 +590,8 @@ static inline void security_free_mnt_opts(struct security_mnt_opts *opts)
  *	@reqprot contains the protection requested by the application.
  *	@prot contains the protection that will be applied by the kernel.
  *	@flags contains the operational flags.
+ *	@addr contains virtual address that will be used for the operation.
+ *	@addr_only contains a boolean: 0 if file-backed VMA, otherwise 1.
  *	Return 0 if permission is granted.
  * @file_mprotect:
  *	Check permissions before changing memory access permissions.
@@ -601,7 +608,7 @@ static inline void security_free_mnt_opts(struct security_mnt_opts *opts)
  *	Return 0 if permission is granted.
  * @file_fcntl:
  *	Check permission before allowing the file operation specified by @cmd
- *	from being performed on the file @file.  Note that @arg can sometimes
+ *	from being performed on the file @file.  Note that @arg sometimes
  *	represents a user space pointer; in other cases, it may be a simple
  *	integer value.  When @arg represents a user space pointer, it should
  *	never be used by the security module.
@@ -788,7 +795,7 @@ static inline void security_free_mnt_opts(struct security_mnt_opts *opts)
  *	information can be saved using the eff_cap field of the
  *	netlink_skb_parms structure.  Also may be used to provide fine
  *	grained control over message transmission.
- *	@sk associated sock of task sending the message.,
+ *	@sk associated sock of task sending the message.
  *	@skb contains the sk_buff structure for the netlink message.
  *	Return 0 if the information was successfully saved and message
  *	is allowed to be transmitted.
@@ -1075,9 +1082,9 @@ static inline void security_free_mnt_opts(struct security_mnt_opts *opts)
  *	should free it.
  *	@key points to the key to be queried.
  *	@_buffer points to a pointer that should be set to point to the
- *	 resulting string (if no label or an error occurs).
+ *	resulting string (if no label or an error occurs).
  *	Return the length of the string (including terminating NUL) or -ve if
- *      an error.
+ *	an error.
  *	May also return 0 (and a NULL buffer pointer) if there is no label.
  *
  * Security hooks affecting all System V IPC operations.
@@ -1263,7 +1270,7 @@ static inline void security_free_mnt_opts(struct security_mnt_opts *opts)
  *	credentials.
  *	@tsk contains the task_struct for the process.
  *	@cred contains the credentials to use.
- *      @ns contains the user namespace we want the capability in
+ *	@ns contains the user namespace we want the capability in
  *	@cap contains the capability <include/linux/capability.h>.
  *	@audit: Whether to write an audit message or not
  *	Return 0 if the capability is granted for @tsk.
@@ -1365,9 +1372,9 @@ static inline void security_free_mnt_opts(struct security_mnt_opts *opts)
  * 	@ctxlen contains the length of @ctx.
  *
  * @inode_getsecctx:
- * 	Returns a string containing all relavent security context information
+ *	Returns a string containing all relevant security context information
  *
- * 	@inode we wish to set the security context of.
+ * 	@inode we wish to get the security context of.
  *	@ctx is a pointer in which to place the allocated security context.
  *	@ctxlen points to the place to put the length of @ctx.
  * This is the main security structure.
@@ -1660,6 +1667,8 @@ struct security_operations {
 extern int security_init(void);
 extern int security_module_enable(struct security_operations *ops);
 extern int register_security(struct security_operations *ops);
+extern void __init security_fixup_ops(struct security_operations *ops);
+
 
 /* Security operations */
 int security_binder_set_context_mgr(struct task_struct *mgr);
@@ -1713,8 +1722,11 @@ int security_sb_parse_opts_str(char *options, struct security_mnt_opts *opts);
 int security_inode_alloc(struct inode *inode);
 void security_inode_free(struct inode *inode);
 int security_inode_init_security(struct inode *inode, struct inode *dir,
-				 const struct qstr *qstr, char **name,
-				 void **value, size_t *len);
+				 const struct qstr *qstr,
+				 initxattrs initxattrs, void *fs_data);
+int security_old_inode_init_security(struct inode *inode, struct inode *dir,
+				     const struct qstr *qstr, char **name,
+				     void **value, size_t *len);
 int security_inode_create(struct inode *dir, struct dentry *dentry, int mode);
 int security_inode_link(struct dentry *old_dentry, struct inode *dir,
 			 struct dentry *new_dentry);
@@ -2063,9 +2075,15 @@ static inline void security_inode_free(struct inode *inode)
 static inline int security_inode_init_security(struct inode *inode,
 						struct inode *dir,
 						const struct qstr *qstr,
-						char **name,
-						void **value,
-						size_t *len)
+						const initxattrs initxattrs,
+						void *fs_data)
+{
+	return -EOPNOTSUPP;
+}
+
+int security_old_inode_init_security(struct inode *inode, struct inode *dir,
+				     const struct qstr *qstr, char **name,
+				     void **value, size_t *len)
 {
 	return -EOPNOTSUPP;
 }
