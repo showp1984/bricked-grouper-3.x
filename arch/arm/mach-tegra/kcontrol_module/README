@@ -1,0 +1,22 @@
+How to use:
+Kcontrol will insert this module with the appropriate parameters on it's own if found in /system/lib/modules.
+All you need for that to work is compile your kernel with CONFIG_KALLSYMS_ALL.
+If you want to test this module on your own without KControl, do this:
+
+echo "0" > /proc/sys/kernel/kptr_restrict
+cat /proc/kallsyms | grep core_dvfs_table | tail -n1
+XXXXXXXX d core_dvfs_table
+cat /proc/kallsyms | grep " soc_speedo_id" | tail -n1
+YYYYYYYY b soc_speedo_id
+
+insmod kcontrol_gpu_tegra.ko dvfs_core_table=0xXXXXXXXX soc_speedo_id=0xYYYYYYYY
+
+(If you insert the module without these parameters, the insert will fail and the module will remove itself. No changes will have been done to your kernel.)
+
+The sysfs exposeables are in /sys/kernel/kcontrol_gpu_tegra/.
+
+If you plan on extending this module with any functionality beware of changing the kernel memory.
+As that may result in unexpected behavior, like world war III, a black hole, or some other shit.
+This module only reads stuff and if it should write something in the future then I am 99.99999% sure that it is safe.
+You should be too if your extension plans to modify a running kernel.
+Otherwise: Don't touch things of which you have no clue.

@@ -212,3 +212,4 @@ obj-${CONFIG_MACH_GROUPER}              += board-grouper-sensors.o
 obj-${CONFIG_TEGRA_BB_XMM_POWER}        += baseband-xmm-power.o
 obj-${CONFIG_TEGRA_BB_XMM_POWER2}       += baseband-xmm-power2.o
 
+obj-$(CONFIG_KCONTROL_GPU_MODULE_TEGRA)	+= kcontrol_module/
