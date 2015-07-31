@@ -1,0 +1,6 @@
+config KCONTROL_GPU_MODULE_TEGRA
+        bool
+        default y
+        depends on ARCH_TEGRA_3x_SOC && MODULES && KALLSYMS_ALL
+	help
+	  Enable Advanced GPU Options in KControl for Tegra 3 Devices

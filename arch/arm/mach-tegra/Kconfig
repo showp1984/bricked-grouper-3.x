@@ -582,3 +582,9 @@ config USBHOST
 	  A simple sysfs interface to allow switching between OTG and FI mode.
 
 endif
+
+menu "KControl Module"
+ 
+source "arch/arm/mach-tegra/kcontrol_module/Kconfig"
+ 
+endmenu
