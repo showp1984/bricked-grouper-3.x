@@ -40,7 +40,7 @@ config ARCH_TEGRA_3x_SOC
 	select USB_EHCI_TEGRA if USB_SUPPORT
 	select USB_ULPI if USB_SUPPORT
 	select USB_ULPI_VIEWPORT if USB_SUPPORT
-	select REPORT_PRESENT_CPUS if TEGRA_AUTO_HOTPLUG
+	select REPORT_PRESENT_CPUS
 	select ARCH_SUPPORTS_MSI if TEGRA_PCI
 	select PCI_MSI if TEGRA_PCI
 	select ARM_ERRATA_754322
@@ -271,6 +271,13 @@ config TEGRA_EMC_SCALING_ENABLE
 	depends on TEGRA_SILICON_PLATFORM
 	default n
 
+config VOLTAGE_CONTROL
+	bool "Enable user voltage control on Tegra CPU"
+	depends on TEGRA_SILICON_PLATFORM
+	default n
+	help
+	User custom voltage control interface
+
 config TEGRA_CPU_DVFS
 	bool "Enable voltage scaling on Tegra CPU"
 	depends on TEGRA_SILICON_PLATFORM
@@ -362,14 +369,55 @@ config TEGRA_CLUSTER_CONTROL
 	depends on ARCH_TEGRA_HAS_DUAL_CPU_CLUSTERS
 	default y if PM_SLEEP
 
-config TEGRA_AUTO_HOTPLUG
-	bool "Enable automatic CPU hot-plugging"
+config CMDLINE_OPTIONS
+	bool "Enable cmdline khz/gov/maxscroff command parsing"
+	default n
+	help
+	  This enables the parsing of maxkhz=<VALUEinKHZ>,
+	  minkhz=<VALUEinKHZ>, governor=<GOVERNOR.NAME> and
+	  maxscroff=<VALUEinKHZ> commands from the kernels cmdline.
+
+config TEGRA_MPDECISION
+	bool "Enable better automatic CPU hot-plugging"
 	depends on HOTPLUG_CPU && CPU_FREQ && !ARCH_CPU_PROBE_RELEASE && !ARCH_TEGRA_2x_SOC
 	default y
 	help
 	  This option enables turning CPUs off/on and switching tegra
 	  high/low power CPU clusters automatically, corresponding to
+	  CPU frequency load.
+
+config TEGRA_MPDECISION_INPUTBOOST_CPUMIN
+	bool "Enable kernel based mpdecision"
+	depends on TEGRA_MPDECISION
+	default n
+	help
+	  This pushes the cpu min speed to predefined values on input events.
+
+config TEGRA_AUTO_HOTPLUG
+	bool "Enable automatic CPU hot-plugging"
+	depends on HOTPLUG_CPU && CPU_FREQ && !ARCH_CPU_PROBE_RELEASE && !ARCH_TEGRA_2x_SOC && !TEGRA_MPDECISION
+	default n
+	help
+	  This option enables turning CPUs off/on and switching tegra
+	  high/low power CPU clusters automatically, corresponding to
 	  CPU frequency scaling.
+
+config TEGRA_CPU_FREQ_SET_MIN_MAX
+	bool "Set Min/Max CPU frequencies."
+	default n
+	help
+	  Allow setting min and max CPU frequencies. Sysfs can be used
+	  to override these values.
+
+config TEGRA_CPU_FREQ_MAX
+	int "Max CPU Frequency"
+	depends on TEGRA_CPU_FREQ_SET_MIN_MAX
+	default 1200000
+
+config TEGRA_CPU_FREQ_MIN
+	int "Min CPU Frequency"
+	depends on TEGRA_CPU_FREQ_SET_MIN_MAX
+	default 102000
 
 config TEGRA_MC_EARLY_ACK
 	bool "Enable early acknowledgement from mermory controller"
@@ -403,6 +451,19 @@ config TEGRA_EMC_TO_DDR_CLOCK
 	int "EMC to DDR clocks ratio"
 	default "2" if ARCH_TEGRA_2x_SOC
 	default "1"
+
+config TEGRA3_VARIANT_CPU_OVERCLOCK
+        bool "CPU Overclocking"
+        default n
+        help
+          CPU Overclocking option
+
+config TEGRA_GPU_OVERCLOCK
+	bool "Tegra3: Enable GPU OC"
+	depends on TEGRA_SILICON_PLATFORM
+	default n
+	help
+	  Choose y to oc the GPU.
 
 config TEGRA_CONVSERVATIVE_GOV_ON_EARLYSUPSEND
 	bool "Use conservative cpu frequency governor when device enters early suspend"
@@ -504,4 +565,20 @@ config TEGRA_PREINIT_CLOCKS
 	help
 	  Preinitialize Tegra clocks to known states before actual full-
 	  scale clock initialization starts.
+
+config GROUPER_HARDBOOT_RECOVERY
+	bool "Reboot to recovery partition when using Kexec-hardboot"
+	depends on MACH_GROUPER
+	depends on KEXEC_HARDBOOT
+	default n
+	help
+	  Reboot with the recovery kernel since the boot kernel decompressor may
+	  not support the hardboot jump.
+
+config USBHOST
+	bool "USBHOST related runtime configuration"
+	default y
+	help
+	  A simple sysfs interface to allow switching between OTG and FI mode.
+
 endif

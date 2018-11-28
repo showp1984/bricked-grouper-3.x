@@ -229,14 +229,13 @@ void tcp_select_initial_window(int __space, __u32 mss,
 	}
 
 	/* Set initial window to a value enough for senders starting with
-	 * initial congestion window of TCP_DEFAULT_INIT_RCVWND. Place
+	 * initial congestion window of sysctl_tcp_default_init_rwnd. Place
 	 * a limit on the initial window when mss is larger than 1460.
 	 */
 	if (mss > (1 << *rcv_wscale)) {
-		int init_cwnd = TCP_DEFAULT_INIT_RCVWND;
+		int init_cwnd = sysctl_tcp_default_init_rwnd;
 		if (mss > 1460)
-			init_cwnd =
-			max_t(u32, (1460 * TCP_DEFAULT_INIT_RCVWND) / mss, 2);
+			init_cwnd = max_t(u32, (1460 * init_cwnd) / mss, 2);
 		/* when initializing use the value from init_rcv_wnd
 		 * rather than the default from above
 		 */
@@ -1794,11 +1793,13 @@ static int tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 		tcp_event_new_data_sent(sk, skb);
 
 		tcp_minshall_update(tp, mss_now, skb);
-		sent_pkts++;
+		sent_pkts += tcp_skb_pcount(skb);
 
 		if (push_one)
 			break;
 	}
+	if (inet_csk(sk)->icsk_ca_state == TCP_CA_Recovery)
+		tp->prr_out += sent_pkts;
 
 	if (likely(sent_pkts)) {
 		tcp_cwnd_validate(sk);
@@ -2291,6 +2292,9 @@ begin_fwd:
 		if (tcp_retransmit_skb(sk, skb))
 			return;
 		NET_INC_STATS_BH(sock_net(sk), mib_idx);
+
+		if (inet_csk(sk)->icsk_ca_state == TCP_CA_Recovery)
+			tp->prr_out += tcp_skb_pcount(skb);
 
 		if (skb == tcp_write_queue_head(sk))
 			inet_csk_reset_xmit_timer(sk, ICSK_TIME_RETRANS,

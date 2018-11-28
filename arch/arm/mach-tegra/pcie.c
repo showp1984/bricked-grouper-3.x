@@ -602,7 +602,7 @@ static struct pci_bus *tegra_pcie_scan_bus(int nr,
 	return pci_scan_bus(sys->busnr, &tegra_pcie_ops, sys);
 }
 
-static struct hw_pci tegra_pcie_hw = {
+static struct hw_pci tegra_pcie_hw __refdata = {
 	.nr_controllers	= MAX_PCIE_SUPPORTED_PORTS,
 	.preinit	= tegra_pcie_preinit,
 	.setup		= tegra_pcie_setup,

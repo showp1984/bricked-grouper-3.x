@@ -28,6 +28,11 @@
 #include "board.h"
 #include "tegra3_emc.h"
 
+#ifdef CONFIG_VOLTAGE_CONTROL
+int user_mv_table[MAX_DVFS_FREQS] = {
+	800, 825, 850, 875, 900, 912, 975, 1000, 1025, 1050, 1075, 1100, 1125, 1150, 1175, 1200, 1212, 1237};
+#endif
+
 static bool tegra_dvfs_cpu_disabled;
 static bool tegra_dvfs_core_disabled;
 static struct dvfs *cpu_dvfs;
@@ -44,6 +49,33 @@ static const int core_millivolts[MAX_DVFS_FREQS] = {
 #define KHZ 1000
 #define MHZ 1000000
 
+/* start cmdline_gpu */
+#ifdef CONFIG_CMDLINE_OPTIONS
+unsigned int cmdline_gpuoc = 0;
+
+static int __init dvfs_read_gpuoc_cmdline(char *options)
+{
+	char *p = options;
+	int ui_gpuoc = memparse(p, &p);
+
+        /* Check if value is valid */
+	if ((ui_gpuoc > 2) || (ui_gpuoc < 0)) {
+		cmdline_gpuoc = 0;
+		printk(KERN_INFO "[cmdline_gpuoc]: ERROR! using default: 416Mhz");
+		return 0;
+	}
+
+	cmdline_gpuoc = ui_gpuoc;
+	printk(KERN_INFO "[cmdline_gpuoc]: gpuoc='%u' -> %uMhz\n", cmdline_gpuoc,
+               ((cmdline_gpuoc == 2)?520:(cmdline_gpuoc == 1)?484:(cmdline_gpuoc == 0)?416:0));
+
+	return 0;
+
+}
+early_param("gpuoc", dvfs_read_gpuoc_cmdline);
+#endif
+/* end cmdline_gpu */
+
 /* VDD_CPU >= (VDD_CORE - cpu_below_core) */
 /* VDD_CORE >= min_level(VDD_CPU), see tegra3_get_core_floor_mv() below */
 #define VDD_CPU_BELOW_VDD_CORE		300
@@ -53,7 +85,7 @@ static int cpu_below_core = VDD_CPU_BELOW_VDD_CORE;
 
 static struct dvfs_rail tegra3_dvfs_rail_vdd_cpu = {
 	.reg_id = "vdd_cpu",
-	.max_millivolts = 1250,
+	.max_millivolts = 1300,
 	.min_millivolts = 800,
 	.step = VDD_SAFE_STEP,
 	.jmp_to_zero = true,
@@ -170,13 +202,19 @@ static struct dvfs cpu_dvfs_table[] = {
 
 	CPU_DVFS("cpu_g",  6, 3, MHZ, 550, 550, 770, 770,  910,  910, 1150, 1230, 1280, 1330, 1370, 1400, 1470, 1500, 1500, 1540, 1540, 1700),
 	CPU_DVFS("cpu_g",  6, 4, MHZ, 550, 550, 770, 770,  940,  940, 1160, 1240, 1280, 1360, 1390, 1470, 1500, 1520, 1520, 1590, 1700),
-
+#ifdef CONFIG_TEGRA3_VARIANT_CPU_OVERCLOCK
+	CPU_DVFS("cpu_g",  7, 0, MHZ, 460, 460, 550, 550,  680,  680,  820,  970, 1040, 1080, 1150, 1200, 1280, 1300, 1300, 1400, 1500, 1600),
+	CPU_DVFS("cpu_g",  7, 1, MHZ, 480, 480, 650, 650,  780,  780,  990, 1040, 1100, 1200, 1300, 1300, 1400, 1400, 1500, 1600, 1600, 1600),
+	CPU_DVFS("cpu_g",  7, 2, MHZ, 520, 520, 700, 700,  860,  860, 1050, 1150, 1200, 1300, 1300, 1400, 1400, 1500, 1600, 1600, 1600, 1600),
+	CPU_DVFS("cpu_g",  7, 3, MHZ, 550, 550, 770, 770,  910,  910, 1150, 1230, 1300, 1300, 1400, 1400, 1500, 1600, 1600, 1600, 1600, 1600),
+	CPU_DVFS("cpu_g",  7, 4, MHZ, 550, 550, 770, 770,  940,  940, 1160, 1300, 1300, 1400, 1400, 1500, 1600, 1600, 1600, 1600, 1600, 1600),
+#else
 	CPU_DVFS("cpu_g",  7, 0, MHZ, 460, 460, 550, 550,  680,  680,  820,  970, 1040, 1080, 1150, 1200, 1280, 1300),
 	CPU_DVFS("cpu_g",  7, 1, MHZ, 480, 480, 650, 650,  780,  780,  990, 1040, 1100, 1200, 1300),
 	CPU_DVFS("cpu_g",  7, 2, MHZ, 520, 520, 700, 700,  860,  860, 1050, 1150, 1200, 1300),
 	CPU_DVFS("cpu_g",  7, 3, MHZ, 550, 550, 770, 770,  910,  910, 1150, 1230, 1300),
 	CPU_DVFS("cpu_g",  7, 4, MHZ, 550, 550, 770, 770,  940,  940, 1160, 1300),
-
+#endif
 	CPU_DVFS("cpu_g",  8, 0, MHZ, 460, 460, 550, 550,  680,  680,  820,  970, 1040, 1080, 1150, 1200, 1280, 1300),
 	CPU_DVFS("cpu_g",  8, 1, MHZ, 480, 480, 650, 650,  780,  780,  990, 1040, 1100, 1200, 1300),
 	CPU_DVFS("cpu_g",  8, 2, MHZ, 520, 520, 700, 700,  860,  860, 1050, 1150, 1200, 1300),
@@ -234,7 +272,23 @@ static struct dvfs core_dvfs_table[] = {
 	CORE_DVFS("vi",     1, 1, KHZ,        1, 216000, 267000, 300000, 371000,  409000,  409000,  409000,  409000),
 	CORE_DVFS("vi",     2, 1, KHZ,        1, 219000, 267000, 300000, 371000,  409000,  425000,  425000,  425000),
 	CORE_DVFS("vi",     3, 1, KHZ,        1,      1,      1,      1,      1,       1,  470000,  470000,  470000),
+#ifdef CONFIG_TEGRA_GPU_OVERCLOCK
+	CORE_DVFS("vde",    0, 1, KHZ,        1, 228000, 275000, 332000, 380000,  416000,  446000,  484000,  484000),
+	CORE_DVFS("mpe",    0, 1, KHZ,        1, 234000, 285000, 332000, 380000,  416000,  446000,  484000,  484000),
+	CORE_DVFS("2d",     0, 1, KHZ,        1, 267000, 285000, 332000, 380000,  416000,  446000,  484000,  484000),
+	CORE_DVFS("epp",    0, 1, KHZ,        1, 267000, 285000, 332000, 380000,  416000,  446000,  484000,  484000),
+	CORE_DVFS("3d",     0, 1, KHZ,        1, 234000, 285000, 332000, 380000,  416000,  446000,  484000,  484000),
+	CORE_DVFS("3d2",    0, 1, KHZ,        1, 234000, 285000, 332000, 380000,  416000,  446000,  484000,  484000),
+	CORE_DVFS("se",     0, 1, KHZ,        1, 267000, 285000, 332000, 380000,  416000,  446000,  484000,  484000),
 
+	CORE_DVFS("vde",    1, 1, KHZ,        1, 228000, 275000, 332000, 380000,  416000,  446000,  484000,  484000),
+	CORE_DVFS("mpe",    1, 1, KHZ,        1, 234000, 285000, 332000, 380000,  416000,  446000,  484000,  484000),
+	CORE_DVFS("2d",     1, 1, KHZ,        1, 267000, 285000, 332000, 380000,  416000,  446000,  484000,  484000),
+	CORE_DVFS("epp",    1, 1, KHZ,        1, 267000, 285000, 332000, 380000,  416000,  446000,  484000,  484000),
+	CORE_DVFS("3d",     1, 1, KHZ,        1, 234000, 285000, 332000, 380000,  416000,  446000,  484000,  484000),
+	CORE_DVFS("3d2",    1, 1, KHZ,        1, 234000, 285000, 332000, 380000,  416000,  446000,  484000,  484000),
+	CORE_DVFS("se",     1, 1, KHZ,        1, 267000, 285000, 332000, 380000,  416000,  446000,  484000,  484000),
+#else
 	CORE_DVFS("vde",    0, 1, KHZ,        1, 228000, 275000, 332000, 380000,  416000,  416000,  416000,  416000),
 	CORE_DVFS("mpe",    0, 1, KHZ,        1, 234000, 285000, 332000, 380000,  416000,  416000,  416000,  416000),
 	CORE_DVFS("2d",     0, 1, KHZ,        1, 267000, 285000, 332000, 380000,  416000,  416000,  416000,  416000),
@@ -250,7 +304,7 @@ static struct dvfs core_dvfs_table[] = {
 	CORE_DVFS("3d",     1, 1, KHZ,        1, 234000, 285000, 332000, 380000,  416000,  416000,  416000,  416000),
 	CORE_DVFS("3d2",    1, 1, KHZ,        1, 234000, 285000, 332000, 380000,  416000,  416000,  416000,  416000),
 	CORE_DVFS("se",     1, 1, KHZ,        1, 267000, 285000, 332000, 380000,  416000,  416000,  416000,  416000),
-
+#endif
 	CORE_DVFS("vde",    2, 1, KHZ,        1, 247000, 304000, 352000, 400000,  437000,  484000,  520000,  600000),
 	CORE_DVFS("mpe",    2, 1, KHZ,        1, 247000, 304000, 361000, 408000,  446000,  484000,  520000,  600000),
 	CORE_DVFS("2d",     2, 1, KHZ,        1, 267000, 304000, 361000, 408000,  446000,  484000,  520000,  600000),
@@ -272,8 +326,13 @@ static struct dvfs core_dvfs_table[] = {
 	CORE_DVFS("host1x", 2, 1, KHZ,        1, 152000, 188000, 222000, 254000,  267000,  267000,  267000,  300000),
 	CORE_DVFS("host1x", 3, 1, KHZ,        1,      1,      1,      1,      1,       1,  242000,  242000,  242000),
 
+#ifdef CONFIG_TEGRA_GPU_OVERCLOCK
+	CORE_DVFS("cbus",   0, 1, KHZ,        1, 228000, 275000, 332000, 380000,  416000,  446000,  484000,  484000),
+	CORE_DVFS("cbus",   1, 1, KHZ,        1, 228000, 275000, 332000, 380000,  416000,  446000,  484000,  484000),
+#else
 	CORE_DVFS("cbus",   0, 1, KHZ,        1, 228000, 275000, 332000, 380000,  416000,  416000,  416000,  416000),
 	CORE_DVFS("cbus",   1, 1, KHZ,        1, 228000, 275000, 332000, 380000,  416000,  416000,  416000,  416000),
+#endif
 	CORE_DVFS("cbus",   2, 1, KHZ,        1, 247000, 304000, 352000, 400000,  437000,  484000,  520000,  600000),
 	CORE_DVFS("cbus",   3, 1, KHZ,        1, 484000, 484000, 484000, 484000,  484000,  484000,  484000,  484000),
 
@@ -326,8 +385,8 @@ static struct dvfs core_dvfs_table[] = {
 	CORE_DVFS("tvdac", -1, 1, KHZ,        1, 220000, 220000, 220000, 220000, 220000,  220000,   220000,  220000),
 	CORE_DVFS("tvo",   -1, 1, KHZ,        1,      1, 297000, 297000, 297000, 297000,  297000,   297000,  297000),
 	CORE_DVFS("cve",   -1, 1, KHZ,        1,      1, 297000, 297000, 297000, 297000,  297000,   297000,  297000),
-	CORE_DVFS("dsia",  -1, 1, KHZ,        1, 275000, 275000, 275000, 275000, 275000,  275000,   275000,  275000),
-	CORE_DVFS("dsib",  -1, 1, KHZ,        1, 275000, 275000, 275000, 275000, 275000,  275000,   275000,  275000),
+	CORE_DVFS("dsia",  -1, 1, KHZ,   432500, 432500, 432500, 432500, 432500, 432500,  432500,   432500,  432500),
+	CORE_DVFS("dsib",  -1, 1, KHZ,   432500, 432500, 432500, 432500, 432500, 432500,  432500,   432500,  432500),
 	CORE_DVFS("hdmi",  -1, 1, KHZ,        1, 148500, 148500, 148500, 148500, 148500,  148500,   148500,  148500),
 
 	/*
@@ -501,7 +560,7 @@ static bool __init match_dvfs_one(struct dvfs *d, int speedo_id, int process_id)
 static int __init get_cpu_nominal_mv_index(
 	int speedo_id, int process_id, struct dvfs **cpu_dvfs)
 {
-	int i, j, mv;
+	int i, j, mv, nom_index;
 	struct dvfs *d;
 	struct clk *c;
 
@@ -518,8 +577,10 @@ static int __init get_cpu_nominal_mv_index(
 	}
 	BUG_ON(i == 0);
 	mv = cpu_millivolts[i - 1];
+	pr_info("cpu_nominal_mv: %i\n", mv);
 	BUG_ON(mv < tegra3_dvfs_rail_vdd_cpu.min_millivolts);
 	mv = min(mv, tegra_cpu_speedo_mv());
+	pr_info("cpu_nominal_mv_min: %i\n", mv);
 
 	/*
 	 * Find matching cpu dvfs entry, and use it to determine index to the
@@ -539,7 +600,6 @@ static int __init get_cpu_nominal_mv_index(
 				    (cpu_millivolts[i] == 0) ||
 				    (mv < cpu_millivolts[i]))
 					break;
-
 				if (c->max_rate <= d->freqs[i]*d->freqs_mult) {
 					i++;
 					break;
@@ -548,6 +608,8 @@ static int __init get_cpu_nominal_mv_index(
 			break;
 		}
 	}
+
+	pr_info("dvfs: freqs_mult: %i\n", d->freqs_mult);
 
 	BUG_ON(i == 0);
 	if (j == (ARRAY_SIZE(cpu_dvfs_table) - 1))
@@ -558,7 +620,17 @@ static int __init get_cpu_nominal_mv_index(
 		       speedo_id, process_id, d->freqs[i-1] * d->freqs_mult);
 
 	*cpu_dvfs = d;
-	return (i - 1);
+
+	nom_index = i - 1;
+	pr_info("cpu_nominal_mv_index: %i\n", nom_index);
+
+	pr_info("cpu_dvfs->speedo_id: %i\n", d->speedo_id);
+	pr_info("cpu_dvfs->process_id: %i\n", d->process_id);
+	for (i=0;i<MAX_DVFS_FREQS;i++) {
+		pr_info("cpu_dvfs->freqs: %lu\n", d->freqs[i]);
+	}
+
+	return nom_index;
 }
 
 static int __init get_core_nominal_mv_index(int speedo_id)
@@ -599,6 +671,9 @@ void __init tegra_soc_init_dvfs(void)
 	int i;
 	int core_nominal_mv_index;
 	int cpu_nominal_mv_index;
+
+        /* set gpuoc */
+        tegra_dvfs_set_gpuoc(cmdline_gpuoc);
 
 #ifndef CONFIG_TEGRA_CORE_DVFS
 	tegra_dvfs_core_disabled = true;
@@ -888,6 +963,311 @@ void tegra_dvfs_core_cap_level_set(int level)
 	core_cap_update();
 	mutex_unlock(&core_cap_lock);
 }
+
+#ifdef CONFIG_CMDLINE_OPTIONS
+
+#define WRITE_CORE_DVFS(_clk_name, _speedo_id, _auto, _mult)	\
+		core_dvfs_table[i].clk_name	= _clk_name;	\
+		core_dvfs_table[i].speedo_id	= _speedo_id;	\
+		core_dvfs_table[i].freqs_mult	= _mult;	\
+		core_dvfs_table[i].auto_dvfs	= _auto;	\
+
+#define WRITE_CORE_DVFS_FREQS(freq0, freq1, freq2, freq3, freq4, freq5, freq6, freq7, freq8)	\
+		core_dvfs_table[i].freqs[0] = freq0;						\
+		core_dvfs_table[i].freqs[1] = freq1;						\
+		core_dvfs_table[i].freqs[2] = freq2;						\
+		core_dvfs_table[i].freqs[3] = freq3;						\
+		core_dvfs_table[i].freqs[4] = freq4;						\
+		core_dvfs_table[i].freqs[5] = freq5;						\
+		core_dvfs_table[i].freqs[6] = freq6;						\
+		core_dvfs_table[i].freqs[7] = freq7;						\
+		core_dvfs_table[i].freqs[8] = freq8;						\
+		core_dvfs_table[i].freqs[9] = 0;						\
+		core_dvfs_table[i].freqs[10] = 0;						\
+		core_dvfs_table[i].freqs[11] = 0;						\
+		core_dvfs_table[i].freqs[12] = 0;						\
+		core_dvfs_table[i].freqs[13] = 0;						\
+		core_dvfs_table[i].freqs[14] = 0;						\
+		core_dvfs_table[i].freqs[15] = 0;						\
+		core_dvfs_table[i].freqs[16] = 0;						\
+		core_dvfs_table[i].freqs[17] = 0;						\
+
+/* setter for cmdline_gpu */
+int tegra_dvfs_set_gpuoc(int gpuoc_val)
+{
+        int i = 0;
+        for (i = 0; i < sizeof(core_dvfs_table); i++) {
+                if ((core_dvfs_table[i].speedo_id == 0) &&
+                     (core_dvfs_table[i].auto_dvfs == 1)) {
+                        if (strcmp(core_dvfs_table[i].clk_name, "vde") == 0) {
+                                if (gpuoc_val == 0) {
+                                        WRITE_CORE_DVFS("vde",    0, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 228000, 275000, 332000, 380000,  416000,  416000,  416000,  416000)
+
+                                } else if (gpuoc_val == 1) {
+                                        WRITE_CORE_DVFS("vde",    0, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 228000, 275000, 332000, 416000,  484000,  484000,  484000,  484000)
+                                } else if (gpuoc_val == 2) {
+                                        WRITE_CORE_DVFS("vde",    0, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 247000, 304000, 400000, 484000,  520000,  520000,  520000,  520000)
+                                }
+                                printk(KERN_INFO "[cmdline_gpuoc]: %s clocks set to %uMhz for speedo_id %i",
+                                       core_dvfs_table[i].clk_name,
+                                       ((cmdline_gpuoc == 2)?520:(cmdline_gpuoc == 1)?484:(cmdline_gpuoc == 0)?416:0),
+                                       core_dvfs_table[i].speedo_id);
+                        }
+                        if (strcmp(core_dvfs_table[i].clk_name, "mpe") == 0) {
+                                if (gpuoc_val == 0) {
+                                        WRITE_CORE_DVFS("mpe",    0, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 234000, 285000, 332000, 380000,  416000,  416000,  416000,  416000)
+                                } else if (gpuoc_val == 1) {
+                                        WRITE_CORE_DVFS("mpe",    0, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 234000, 285000, 332000, 416000,  484000,  484000,  484000,  484000)
+                                } else if (gpuoc_val == 2) {
+                                        WRITE_CORE_DVFS("mpe",    0, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 247000, 304000, 400000, 484000,  520000,  520000,  520000,  520000)
+                                }
+                                printk(KERN_INFO "[cmdline_gpuoc]: %s clocks set to %uMhz for speedo_id %i",
+                                       core_dvfs_table[i].clk_name,
+                                       ((cmdline_gpuoc == 2)?520:(cmdline_gpuoc == 1)?484:(cmdline_gpuoc == 0)?416:0),
+                                       core_dvfs_table[i].speedo_id);
+                        }
+                        if (strcmp(core_dvfs_table[i].clk_name, "2d") == 0) {
+                                if (gpuoc_val == 0) {
+                                        WRITE_CORE_DVFS("2d",     0, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 267000, 285000, 332000, 380000,  416000,  416000,  416000,  416000)
+                                } else if (gpuoc_val == 1) {
+                                        WRITE_CORE_DVFS("2d",     0, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 267000, 285000, 332000, 416000,  484000,  484000,  484000,  484000)
+                                } else if (gpuoc_val == 2) {
+                                        WRITE_CORE_DVFS("2d",     0, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 247000, 304000, 400000, 484000,  520000,  520000,  520000,  520000)
+                                }
+                                printk(KERN_INFO "[cmdline_gpuoc]: %s clocks set to %uMhz for speedo_id %i",
+                                       core_dvfs_table[i].clk_name,
+                                       ((cmdline_gpuoc == 2)?520:(cmdline_gpuoc == 1)?484:(cmdline_gpuoc == 0)?416:0),
+                                       core_dvfs_table[i].speedo_id);
+                        }
+                        if (strcmp(core_dvfs_table[i].clk_name, "epp") == 0) {
+                                if (gpuoc_val == 0) {
+                                        WRITE_CORE_DVFS("epp",    0, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 267000, 285000, 332000, 380000,  416000,  416000,  416000,  416000)
+                                } else if (gpuoc_val == 1) {
+                                        WRITE_CORE_DVFS("epp",    0, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 267000, 285000, 332000, 416000,  484000,  484000,  484000,  484000)
+                                } else if (gpuoc_val == 2) {
+                                        WRITE_CORE_DVFS("epp",    0, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 247000, 304000, 400000, 484000,  520000,  520000,  520000,  520000)
+                                }
+                                printk(KERN_INFO "[cmdline_gpuoc]: %s clocks set to %uMhz for speedo_id %i",
+                                       core_dvfs_table[i].clk_name,
+                                       ((cmdline_gpuoc == 2)?520:(cmdline_gpuoc == 1)?484:(cmdline_gpuoc == 0)?416:0),
+                                       core_dvfs_table[i].speedo_id);
+                        }
+                        if (strcmp(core_dvfs_table[i].clk_name, "3d") == 0) {
+                                if (gpuoc_val == 0) {
+                                        WRITE_CORE_DVFS("3d",     0, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 234000, 285000, 332000, 380000,  416000,  416000,  416000,  416000)
+                                } else if (gpuoc_val == 1) {
+                                        WRITE_CORE_DVFS("3d",     0, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 234000, 285000, 332000, 416000,  484000,  484000,  484000,  484000)
+                                } else if (gpuoc_val == 2) {
+                                        WRITE_CORE_DVFS("3d",     0, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 247000, 304000, 400000, 484000,  520000,  520000,  520000,  520000)
+                                }
+                                printk(KERN_INFO "[cmdline_gpuoc]: %s clocks set to %uMhz for speedo_id %i",
+                                       core_dvfs_table[i].clk_name,
+                                       ((cmdline_gpuoc == 2)?520:(cmdline_gpuoc == 1)?484:(cmdline_gpuoc == 0)?416:0),
+                                       core_dvfs_table[i].speedo_id);
+                        }
+                        if (strcmp(core_dvfs_table[i].clk_name, "3d2") == 0) {
+                                if (gpuoc_val == 0) {
+                                        WRITE_CORE_DVFS("3d2",    0, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 234000, 285000, 332000, 380000,  416000,  416000,  416000,  416000)
+                                } else if (gpuoc_val == 1) {
+                                        WRITE_CORE_DVFS("3d2",    0, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 234000, 285000, 332000, 416000,  484000,  484000,  484000,  484000)
+                                } else if (gpuoc_val == 2) {
+                                        WRITE_CORE_DVFS("3d2",    0, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 247000, 304000, 400000, 484000,  520000,  520000,  520000,  520000)
+                                }
+                                printk(KERN_INFO "[cmdline_gpuoc]: %s clocks set to %uMhz for speedo_id %i",
+                                       core_dvfs_table[i].clk_name,
+                                       ((cmdline_gpuoc == 2)?520:(cmdline_gpuoc == 1)?484:(cmdline_gpuoc == 0)?416:0),
+                                       core_dvfs_table[i].speedo_id);
+                        }
+                        if (strcmp(core_dvfs_table[i].clk_name, "se") == 0) {
+                                if (gpuoc_val == 0) {
+                                        WRITE_CORE_DVFS("se",     0, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 267000, 285000, 332000, 380000,  416000,  416000,  416000,  416000)
+                                } else if (gpuoc_val == 1) {
+                                        WRITE_CORE_DVFS("se",     0, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 267000, 285000, 332000, 416000,  484000,  484000,  484000,  484000)
+                                } else if (gpuoc_val == 2) {
+                                        WRITE_CORE_DVFS("se",     0, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 247000, 304000, 400000, 484000,  520000,  520000,  520000,  520000)
+                                }
+                                printk(KERN_INFO "[cmdline_gpuoc]: %s clocks set to %uMhz for speedo_id %i",
+                                       core_dvfs_table[i].clk_name,
+                                       ((cmdline_gpuoc == 2)?520:(cmdline_gpuoc == 1)?484:(cmdline_gpuoc == 0)?416:0),
+                                       core_dvfs_table[i].speedo_id);
+                        }
+                        if (strcmp(core_dvfs_table[i].clk_name, "cbus") == 0) {
+                                if (gpuoc_val == 0) {
+                                        WRITE_CORE_DVFS("cbus",     0, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 228000, 275000, 332000, 380000,  416000,  416000,  416000,  416000)
+                                } else if (gpuoc_val == 1) {
+                                        WRITE_CORE_DVFS("cbus",     0, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 228000, 275000, 332000, 416000,  484000,  484000,  484000,  484000)
+                                } else if (gpuoc_val == 2) {
+                                        WRITE_CORE_DVFS("cbus",     0, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 247000, 304000, 400000, 484000,  520000,  520000,  520000,  520000)
+                                }
+                                printk(KERN_INFO "[cmdline_gpuoc]: %s clocks set to %uMhz for speedo_id %i",
+                                       core_dvfs_table[i].clk_name,
+                                       ((cmdline_gpuoc == 2)?520:(cmdline_gpuoc == 1)?484:(cmdline_gpuoc == 0)?416:0),
+                                       core_dvfs_table[i].speedo_id);
+                        }
+                }
+                if ((core_dvfs_table[i].speedo_id == 1) &&
+                     (core_dvfs_table[i].auto_dvfs == 1)) {
+                        if (strcmp(core_dvfs_table[i].clk_name, "vde") == 0) {
+                                if (gpuoc_val == 0) {
+                                        WRITE_CORE_DVFS("vde",    1, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 228000, 275000, 332000, 380000,  416000,  416000,  416000,  416000)
+
+                                } else if (gpuoc_val == 1) {
+                                        WRITE_CORE_DVFS("vde",    1, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 228000, 275000, 332000, 416000,  484000,  484000,  484000,  484000)
+                                } else if (gpuoc_val == 2) {
+                                        WRITE_CORE_DVFS("vde",    1, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 247000, 304000, 400000, 484000,  520000,  520000,  520000,  520000)
+                                }
+                                printk(KERN_INFO "[cmdline_gpuoc]: %s clocks set to %uMhz for speedo_id %i",
+                                       core_dvfs_table[i].clk_name,
+                                       ((cmdline_gpuoc == 2)?520:(cmdline_gpuoc == 1)?484:(cmdline_gpuoc == 0)?416:0),
+                                       core_dvfs_table[i].speedo_id);
+                        }
+                        if (strcmp(core_dvfs_table[i].clk_name, "mpe") == 0) {
+                                if (gpuoc_val == 0) {
+                                        WRITE_CORE_DVFS("mpe",    1, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 234000, 285000, 332000, 380000,  416000,  416000,  416000,  416000)
+                                } else if (gpuoc_val == 1) {
+                                        WRITE_CORE_DVFS("mpe",    1, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 234000, 285000, 332000, 416000,  484000,  484000,  484000,  484000)
+                                } else if (gpuoc_val == 2) {
+                                        WRITE_CORE_DVFS("mpe",    1, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 247000, 304000, 400000, 484000,  520000,  520000,  520000,  520000)
+                                }
+                                printk(KERN_INFO "[cmdline_gpuoc]: %s clocks set to %uMhz for speedo_id %i",
+                                       core_dvfs_table[i].clk_name,
+                                       ((cmdline_gpuoc == 2)?520:(cmdline_gpuoc == 1)?484:(cmdline_gpuoc == 0)?416:0),
+                                       core_dvfs_table[i].speedo_id);
+                        }
+                        if (strcmp(core_dvfs_table[i].clk_name, "2d") == 0) {
+                                if (gpuoc_val == 0) {
+                                        WRITE_CORE_DVFS("2d",     1, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 267000, 285000, 332000, 380000,  416000,  416000,  416000,  416000)
+                                } else if (gpuoc_val == 1) {
+                                        WRITE_CORE_DVFS("2d",     1, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 267000, 285000, 332000, 416000,  484000,  484000,  484000,  484000)
+                                } else if (gpuoc_val == 2) {
+                                        WRITE_CORE_DVFS("2d",     1, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 247000, 304000, 400000, 484000,  520000,  520000,  520000,  520000)
+                                }
+                                printk(KERN_INFO "[cmdline_gpuoc]: %s clocks set to %uMhz for speedo_id %i",
+                                       core_dvfs_table[i].clk_name,
+                                       ((cmdline_gpuoc == 2)?520:(cmdline_gpuoc == 1)?484:(cmdline_gpuoc == 0)?416:0),
+                                       core_dvfs_table[i].speedo_id);
+                        }
+                        if (strcmp(core_dvfs_table[i].clk_name, "epp") == 0) {
+                                if (gpuoc_val == 0) {
+                                        WRITE_CORE_DVFS("epp",    1, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 267000, 285000, 332000, 380000,  416000,  416000,  416000,  416000)
+                                } else if (gpuoc_val == 1) {
+                                        WRITE_CORE_DVFS("epp",    1, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 267000, 285000, 332000, 416000,  484000,  484000,  484000,  484000)
+                                } else if (gpuoc_val == 2) {
+                                        WRITE_CORE_DVFS("epp",    1, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 247000, 304000, 400000, 484000,  520000,  520000,  520000,  520000)
+                                }
+                                printk(KERN_INFO "[cmdline_gpuoc]: %s clocks set to %uMhz for speedo_id %i",
+                                       core_dvfs_table[i].clk_name,
+                                       ((cmdline_gpuoc == 2)?520:(cmdline_gpuoc == 1)?484:(cmdline_gpuoc == 0)?416:0),
+                                       core_dvfs_table[i].speedo_id);
+                        }
+                        if (strcmp(core_dvfs_table[i].clk_name, "3d") == 0) {
+                                if (gpuoc_val == 0) {
+                                        WRITE_CORE_DVFS("3d",     1, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 234000, 285000, 332000, 380000,  416000,  416000,  416000,  416000)
+                                } else if (gpuoc_val == 1) {
+                                        WRITE_CORE_DVFS("3d",     1, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 234000, 285000, 332000, 416000,  484000,  484000,  484000,  484000)
+                                } else if (gpuoc_val == 2) {
+                                        WRITE_CORE_DVFS("3d",     1, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 247000, 304000, 400000, 484000,  520000,  520000,  520000,  520000)
+                                }
+                                printk(KERN_INFO "[cmdline_gpuoc]: %s clocks set to %uMhz for speedo_id %i",
+                                       core_dvfs_table[i].clk_name,
+                                       ((cmdline_gpuoc == 2)?520:(cmdline_gpuoc == 1)?484:(cmdline_gpuoc == 0)?416:0),
+                                       core_dvfs_table[i].speedo_id);
+                        }
+                        if (strcmp(core_dvfs_table[i].clk_name, "3d2") == 0) {
+                                if (gpuoc_val == 0) {
+                                        WRITE_CORE_DVFS("3d2",    1, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 234000, 285000, 332000, 380000,  416000,  416000,  416000,  416000)
+                                } else if (gpuoc_val == 1) {
+                                        WRITE_CORE_DVFS("3d2",    1, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 234000, 285000, 332000, 416000,  484000,  484000,  484000,  484000)
+                                } else if (gpuoc_val == 2) {
+                                        WRITE_CORE_DVFS("3d2",    1, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 247000, 304000, 400000, 484000,  520000,  520000,  520000,  520000)
+                                }
+                                printk(KERN_INFO "[cmdline_gpuoc]: %s clocks set to %uMhz for speedo_id %i",
+                                       core_dvfs_table[i].clk_name,
+                                       ((cmdline_gpuoc == 2)?520:(cmdline_gpuoc == 1)?484:(cmdline_gpuoc == 0)?416:0),
+                                       core_dvfs_table[i].speedo_id);
+                        }
+                        if (strcmp(core_dvfs_table[i].clk_name, "se") == 0) {
+                                if (gpuoc_val == 0) {
+                                        WRITE_CORE_DVFS("se",     1, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 267000, 285000, 332000, 380000,  416000,  416000,  416000,  416000)
+                                } else if (gpuoc_val == 1) {
+                                        WRITE_CORE_DVFS("se",     1, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 267000, 285000, 332000, 416000,  484000,  484000,  484000,  484000)
+                                } else if (gpuoc_val == 2) {
+                                        WRITE_CORE_DVFS("se",     1, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 247000, 304000, 400000, 484000,  520000,  520000,  520000,  520000)
+                                }
+                                printk(KERN_INFO "[cmdline_gpuoc]: %s clocks set to %uMhz for speedo_id %i",
+                                       core_dvfs_table[i].clk_name,
+                                       ((cmdline_gpuoc == 2)?520:(cmdline_gpuoc == 1)?484:(cmdline_gpuoc == 0)?416:0),
+                                       core_dvfs_table[i].speedo_id);
+                        }
+                        if (strcmp(core_dvfs_table[i].clk_name, "cbus") == 0) {
+                                if (gpuoc_val == 0) {
+                                        WRITE_CORE_DVFS("cbus",     1, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 228000, 275000, 332000, 380000,  416000,  416000,  416000,  416000)
+                                } else if (gpuoc_val == 1) {
+                                        WRITE_CORE_DVFS("cbus",     1, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 228000, 275000, 332000, 416000,  484000,  484000,  484000,  484000)
+                                } else if (gpuoc_val == 2) {
+                                        WRITE_CORE_DVFS("cbus",     1, 1, KHZ)
+                                        WRITE_CORE_DVFS_FREQS(1, 247000, 304000, 400000, 484000,  520000,  520000,  520000,  520000)
+                                }
+                                printk(KERN_INFO "[cmdline_gpuoc]: %s clocks set to %uMhz for speedo_id %i",
+                                       core_dvfs_table[i].clk_name,
+                                       ((cmdline_gpuoc == 2)?520:(cmdline_gpuoc == 1)?484:(cmdline_gpuoc == 0)?416:0),
+                                       core_dvfs_table[i].speedo_id);
+                                /* if we get here we can return */
+                                return 0;
+                        }
+                }
+        }
+	return 0;
+}
+#endif
+/* end cmdline_gpu */
 
 static int __init init_core_cap_one(struct clk *c, unsigned long *freqs)
 {

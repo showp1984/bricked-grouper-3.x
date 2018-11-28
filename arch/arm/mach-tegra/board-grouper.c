@@ -67,6 +67,10 @@
 #include "pm.h"
 #include "wdt-recovery.h"
 
+#ifdef CONFIG_CPU_FREQ_GOV_ONDEMAND_2_PHASE
+int set_two_phase_freq(int cpufreq);
+#endif
+
 /* All units are in millicelsius */
 static struct tegra_thermal_data thermal_data = {
 	.temp_throttle = 85000,
@@ -642,7 +646,7 @@ static struct i2c_board_info elan_i2c_devices[] = {
         {
                 I2C_BOARD_INFO(ELAN_KTF3K_NAME, 0x10),
                 .platform_data = &ts_elan_ktf3k_data,
-                .irq = (INT_GPIO_BASE + TEGRA_GPIO_PH4),
+                .irq = TEGRA_GPIO_TO_IRQ(TEGRA_GPIO_PH4),
         },
 
 };
@@ -1090,6 +1094,9 @@ static void __init tegra_grouper_init(void)
 	grouper_i2c_init();
 	grouper_spi_init();
 	grouper_usb_init();
+#ifdef CONFIG_CPU_FREQ_GOV_ONDEMAND_2_PHASE
+        set_two_phase_freq(1000000);
+#endif
 #ifdef CONFIG_TEGRA_EDP_LIMITS
 	if (grouper_query_pmic_id())
 		grouper_ti_edp_init();

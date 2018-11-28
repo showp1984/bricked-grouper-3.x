@@ -42,7 +42,6 @@
 #include <linux/vmalloc.h>
 #include <linux/memblock.h>
 #include <linux/console.h>
-#include <linux/pm_qos_params.h>
 #include <linux/tegra_audio.h>
 
 #include <trace/events/power.h>
@@ -138,6 +137,11 @@ struct suspend_context tegra_sctx;
 #define PMC_CPUPWROFF_TIMER	0xcc
 #define PMC_COREPWROFF_TIMER	PMC_WAKE_DELAY
 
+#define PMC_PWRGATE_TOGGLE	0x30
+#define PWRGATE_TOGGLE_START	(1 << 8)
+#define UN_PWRGATE_CPU		\
+	(PWRGATE_TOGGLE_START | TEGRA_CPU_POWERGATE_ID(TEGRA_POWERGATE_CPU))
+
 #ifdef CONFIG_TEGRA_CLUSTER_CONTROL
 #define PMC_SCRATCH4_WAKE_CLUSTER_MASK	(1<<31)
 #endif
@@ -170,9 +174,6 @@ struct suspend_context tegra_sctx;
 #define MC_SECURITY_START	0x6c
 #define MC_SECURITY_SIZE	0x70
 #define MC_SECURITY_CFG2	0x7c
-
-#define AWAKE_CPU_FREQ_MIN	100000
-static struct pm_qos_request_list awake_cpu_freq_req;
 
 struct dvfs_rail *tegra_cpu_rail;
 static struct dvfs_rail *tegra_core_rail;
@@ -527,7 +528,6 @@ unsigned int tegra_idle_lp2_last(unsigned int sleep_time, unsigned int flags)
 		mode |= TEGRA_POWER_PWRREQ_OE;
 	mode &= ~TEGRA_POWER_EFFECT_LP0;
 	pmc_32kwritel(mode, PMC_CTRL);
-	mode |= flags;
 
 	tegra_cluster_switch_time(flags, tegra_cluster_switch_time_id_start);
 
@@ -539,7 +539,17 @@ unsigned int tegra_idle_lp2_last(unsigned int sleep_time, unsigned int flags)
 		trace_cpu_cluster(POWER_CPU_CLUSTER_START);
 		set_power_timers(pdata->cpu_timer, 0,
 			clk_get_rate_all_locked(tegra_pclk));
-		tegra_cluster_switch_prolog(mode);
+		if (flags & TEGRA_POWER_CLUSTER_G) {
+			/*
+			 * To reduce the vdd_cpu up latency when LP->G
+			 * transition. Before the transition, enable
+			 * the vdd_cpu rail.
+			 */
+			if (is_lp_cluster())
+				writel(UN_PWRGATE_CPU,
+				       pmc + PMC_PWRGATE_TOGGLE);
+		}
+		tegra_cluster_switch_prolog(flags);
 	} else {
 		set_power_timers(pdata->cpu_timer, pdata->cpu_off_timer,
 			clk_get_rate_all_locked(tegra_pclk));
@@ -549,7 +559,7 @@ unsigned int tegra_idle_lp2_last(unsigned int sleep_time, unsigned int flags)
 		tegra_lp2_set_trigger(sleep_time);
 
 	cpu_complex_pm_enter();
-	suspend_cpu_complex(mode);
+	suspend_cpu_complex(flags);
 	tegra_cluster_switch_time(flags, tegra_cluster_switch_time_id_prolog);
 	flush_cache_all();
 	/*
@@ -566,7 +576,7 @@ unsigned int tegra_idle_lp2_last(unsigned int sleep_time, unsigned int flags)
 
 	tegra_init_cache(false);
 	tegra_cluster_switch_time(flags, tegra_cluster_switch_time_id_switch);
-	restore_cpu_complex(mode);
+	restore_cpu_complex(flags);
 	cpu_complex_pm_exit();
 
 	remain = tegra_lp2_timer_remain();
@@ -574,7 +584,7 @@ unsigned int tegra_idle_lp2_last(unsigned int sleep_time, unsigned int flags)
 		tegra_lp2_set_trigger(0);
 
 	if (flags & TEGRA_POWER_CLUSTER_MASK) {
-		tegra_cluster_switch_epilog(mode);
+		tegra_cluster_switch_epilog(flags);
 		trace_cpu_cluster(POWER_CPU_CLUSTER_DONE);
 	}
 	tegra_cluster_switch_time(flags, tegra_cluster_switch_time_id_epilog);
@@ -1010,8 +1020,6 @@ void __init tegra_init_suspend(struct tegra_suspend_platform_data *plat)
 
 	tegra_cpu_rail = tegra_dvfs_get_rail_by_name("vdd_cpu");
 	tegra_core_rail = tegra_dvfs_get_rail_by_name("vdd_core");
-	pm_qos_add_request(&awake_cpu_freq_req, PM_QOS_CPU_FREQ_MIN,
-			   AWAKE_CPU_FREQ_MIN);
 
 	tegra_pclk = clk_get_sys(NULL, "pclk");
 	BUG_ON(IS_ERR(tegra_pclk));
@@ -1253,14 +1261,12 @@ static void pm_early_suspend(struct early_suspend *h)
 {
 	if (clk_wake)
 		clk_disable(clk_wake);
-	pm_qos_update_request(&awake_cpu_freq_req, PM_QOS_DEFAULT_VALUE);
 }
 
 static void pm_late_resume(struct early_suspend *h)
 {
 	if (clk_wake)
 		clk_enable(clk_wake);
-	pm_qos_update_request(&awake_cpu_freq_req, (s32)AWAKE_CPU_FREQ_MIN);
 }
 
 static struct early_suspend pm_early_suspender = {

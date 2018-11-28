@@ -20,7 +20,7 @@
 #include <linux/switch.h>
 #include <asm/gpio.h>
 
-#include "include/mach/board-grouper-misc.h"
+#include "../../../arch/arm/mach-tegra/include/mach/board-grouper-misc.h"
 
 MODULE_DESCRIPTION("SMSC Proximity Sensor CAP1106 Driver");
 MODULE_LICENSE("GPL");

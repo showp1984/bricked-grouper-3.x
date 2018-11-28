@@ -37,6 +37,7 @@ bool tegra_all_cpus_booted;
 
 static DECLARE_BITMAP(tegra_cpu_init_bits, CONFIG_NR_CPUS) __read_mostly;
 const struct cpumask *const tegra_cpu_init_mask = to_cpumask(tegra_cpu_init_bits);
+
 #define tegra_cpu_init_map	(*(cpumask_t *)tegra_cpu_init_mask)
 
 #define CLK_RST_CONTROLLER_CLK_CPU_CMPLX \

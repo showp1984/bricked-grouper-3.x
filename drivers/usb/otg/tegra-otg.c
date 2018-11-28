@@ -5,6 +5,7 @@
  *
  * Copyright (C) 2010 NVIDIA Corp.
  * Copyright (C) 2010 Google, Inc.
+ * Copyright (C) 2013 Timur Mehrvarz
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -42,6 +43,9 @@
 #define  USB_VBUS_INT_STATUS	(1 << 9)
 #define  USB_VBUS_STATUS	(1 << 10)
 #define  USB_INTS		(USB_VBUS_INT_STATUS | USB_ID_INT_STATUS)
+#define  USB_INT_ENS		(USB_VBUS_INT_EN | USB_ID_INT_EN | USB_VBUS_WAKEUP_EN | USB_ID_PIN_WAKEUP_EN)
+
+extern volatile int smb347_deep_sleep;  // tmtmtm: from smb347-charger.c
 
 typedef void (*callback_t)(enum usb_otg_state to,
 				enum usb_otg_state from, void *args);
@@ -63,6 +67,11 @@ struct tegra_otg_data {
 
 };
 static struct tegra_otg_data *tegra_clone;
+
+#ifdef CONFIG_USB_OTG_ON_CHARGING
+static bool tegra_otg_on_charging = false;
+module_param(tegra_otg_on_charging, bool, 0664);
+#endif
 
 static inline unsigned long otg_readl(struct tegra_otg_data *tegra,
 				      unsigned int offset)
@@ -230,21 +239,39 @@ static void irq_work(struct work_struct *work)
 		dev_info(tegra->otg.dev, "%s --> %s\n", tegra_state_name(from),
 					      tegra_state_name(to));
 
-		if (tegra->charger_cb)
-			tegra->charger_cb(to, from, tegra->charger_cb_data);
+		// tmtmtm
+        smb347_deep_sleep = 0;
+		if (tegra->charger_cb) {
+			if (tegra_otg_on_charging)
+				/* enable v_bus detection for charging */
+				tegra->detect_vbus = true;
+			else
+				/* enable OTG to supply internal power */
+				tegra->charger_cb(to, from, tegra->charger_cb_data);				
+		}
 
 		if (to == OTG_STATE_A_SUSPEND) {
-			if (from == OTG_STATE_A_HOST)
+			if (from == OTG_STATE_A_HOST) {
+				if (tegra->charger_cb) {
+					tegra->charger_cb(to, from, tegra->charger_cb_data); // smb347_otg_status()
+				}
 				tegra_stop_host(tegra);
+			}
 			else if (from == OTG_STATE_B_PERIPHERAL && otg->gadget)
 				usb_gadget_vbus_disconnect(otg->gadget);
 		} else if (to == OTG_STATE_B_PERIPHERAL && otg->gadget) {
 			if (from == OTG_STATE_A_SUSPEND)
 				usb_gadget_vbus_connect(otg->gadget);
 		} else if (to == OTG_STATE_A_HOST) {
-			if (from == OTG_STATE_A_SUSPEND)
-			tegra_start_host(tegra);
+			//if (from != OTG_STATE_A_HOST)
+			if (from == OTG_STATE_A_SUSPEND) {
+				if (tegra->charger_cb) {
+					tegra->charger_cb(to, from, tegra->charger_cb_data); // smb347_otg_status()
+				}
+			    tegra_start_host(tegra);
+            }
 		}
+        dev_info(tegra->otg.dev, "done\n");
 	}
 
 
@@ -264,17 +291,6 @@ static irqreturn_t tegra_otg_irq(int irq, void *data)
 	if (val & (USB_VBUS_INT_EN | USB_ID_INT_EN)) {
 		otg_writel(tegra, val, USB_PHY_WAKEUP);
 		if ((val & USB_ID_INT_STATUS) || (val & USB_VBUS_INT_STATUS)) {
-			tegra->int_status = val;
-			tegra->detect_vbus = false;
-			schedule_work(&tegra->work);
-		}
-	} else {
-		if ((val & USB_ID_INT_STATUS) || (val & USB_VBUS_INT_STATUS)) {
-			printk(KERN_INFO "%s(): WRONG! val = %#X\n", __func__, val);
-			val |= (USB_VBUS_INT_EN | USB_VBUS_WAKEUP_EN);
-			val |= (USB_ID_INT_EN | USB_ID_PIN_WAKEUP_EN);
-			otg_writel(tegra, val, USB_PHY_WAKEUP);
-
 			tegra->int_status = val;
 			tegra->detect_vbus = false;
 			schedule_work(&tegra->work);
@@ -428,6 +444,8 @@ static int tegra_otg_probe(struct platform_device *pdev)
 
 	if (!ehci_pdata->default_enable)
 		clk_disable(tegra->clk);
+
+	tegra->intr_reg_data = tegra->intr_reg_data | USB_INT_ENS;
 	dev_info(&pdev->dev, "otg transceiver registered\n");
 	return 0;
 
@@ -475,7 +493,7 @@ static int tegra_otg_suspend(struct device *dev)
 	val = tegra_otg->intr_reg_data & ~(USB_ID_INT_EN | USB_VBUS_INT_EN);
 	writel(val, (tegra_otg->regs + USB_PHY_WAKEUP));
 	clk_disable(tegra_otg->clk);
-	printk(KERN_INFO "%s(): tegra_otg->intr_reg_data = %#X\n", __func__, tegra_otg->intr_reg_data);
+
 	if (from == OTG_STATE_B_PERIPHERAL && otg->gadget) {
 		usb_gadget_vbus_disconnect(otg->gadget);
 		otg->state = OTG_STATE_A_SUSPEND;
@@ -500,13 +518,6 @@ static void tegra_otg_resume(struct device *dev)
 	msleep(1);
 	/* restore the interupt enable for cable ID and VBUS */
 	clk_enable(tegra_otg->clk);
-	if (!(tegra_otg->intr_reg_data & USB_VBUS_INT_EN) || !(tegra_otg->intr_reg_data & USB_VBUS_WAKEUP_EN) ||
-		!(tegra_otg->intr_reg_data & USB_ID_INT_EN) || !(tegra_otg->intr_reg_data & USB_ID_PIN_WAKEUP_EN)) {
-		printk(KERN_INFO "%s(): WRONG! tegra_otg->intr_reg_data = %#X\n", __func__, tegra_otg->intr_reg_data);
-		tegra_otg->intr_reg_data |= (USB_VBUS_INT_EN | USB_VBUS_WAKEUP_EN);
-		tegra_otg->intr_reg_data |= (USB_ID_INT_EN | USB_ID_PIN_WAKEUP_EN);
-	}
-	printk(KERN_INFO "%s(): tegra_otg->intr_reg_data = %#X\n", __func__, tegra_otg->intr_reg_data);
 	writel(tegra_otg->intr_reg_data, (tegra_otg->regs + USB_PHY_WAKEUP));
 	val = readl(tegra_otg->regs + USB_PHY_WAKEUP);
 	clk_disable(tegra_otg->clk);

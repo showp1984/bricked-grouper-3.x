@@ -24,6 +24,11 @@
 
 #define CPUFREQ_NAME_LEN 16
 
+#ifdef CONFIG_CMDLINE_OPTIONS
+/* cmdline_khz/gov/maxscroff variables */
+extern char cmdline_gov[CPUFREQ_NAME_LEN];
+extern int cmdline_gov_cnt;
+#endif
 
 /*********************************************************************
  *                     CPUFREQ NOTIFIER INTERFACE                    *
@@ -202,6 +207,9 @@ extern int __cpufreq_driver_getavg(struct cpufreq_policy *policy,
 
 int cpufreq_register_governor(struct cpufreq_governor *governor);
 void cpufreq_unregister_governor(struct cpufreq_governor *governor);
+
+int lock_policy_rwsem_write(int cpu);
+void unlock_policy_rwsem_write(int cpu);
 
 
 /*********************************************************************

@@ -218,6 +218,7 @@ static int grouper_panel_enable(void)
 		else
 			regulator_enable(grouper_lvds_vdd_panel);
 	}
+	msleep(20);
 
 	if( grouper_get_project_id() == GROUPER_PROJECT_BACH )
 	{
@@ -410,7 +411,7 @@ static struct tegra_dc_sd_settings grouper_sd_settings = {
 	.bin_width = -1,
 	.aggressiveness = 1,
 	.phase_in_adjustments = true,
-	.panel_min_brightness = 13,
+	.panel_min_brightness = 8,
 	.use_vid_luma = false,
 	/* Default video coefficients */
 	.coeff = {5, 9, 2},
@@ -549,7 +550,7 @@ static struct tegra_dc_out grouper_disp1_out = {
 
 	.type		= TEGRA_DC_OUT_RGB,
 	.depth		= 18,
-	.dither		= TEGRA_DC_ORDERED_DITHER,
+	.dither		= TEGRA_DC_ERRDIFF_DITHER,
 
 	.modes		= grouper_panel_modes,
 	.n_modes	= ARRAY_SIZE(grouper_panel_modes),

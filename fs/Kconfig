@@ -4,6 +4,11 @@
 
 menu "File systems"
 
+config VFS_CACHE_PRESSURE
+	int "vfs Cache Pressure"
+	default 100
+	help
+
 if BLOCK
 
 source "fs/ext2/Kconfig"
@@ -219,6 +224,7 @@ source "fs/pstore/Kconfig"
 source "fs/sysv/Kconfig"
 source "fs/ufs/Kconfig"
 source "fs/exofs/Kconfig"
+source "fs/f2fs/Kconfig"
 
 endif # MISC_FILESYSTEMS
 

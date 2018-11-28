@@ -1,4 +1,4 @@
-/******************************************************************************
+ /******************************************************************************
  *
  * Copyright(c) 2003 - 2011 Intel Corporation. All rights reserved.
  *
@@ -2514,7 +2514,7 @@ static void iwl3945_bg_alive_start(struct work_struct *data)
 	    container_of(data, struct iwl_priv, alive_start.work);
 
 	mutex_lock(&priv->mutex);
-	if (test_bit(STATUS_EXIT_PENDING, &priv->status))
+	if (test_bit(STATUS_EXIT_PENDING, &priv->status) || priv->txq == NULL)
 		goto out;
 
 	iwl3945_alive_start(priv);

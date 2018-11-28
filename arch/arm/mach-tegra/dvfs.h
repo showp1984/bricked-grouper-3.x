@@ -24,6 +24,12 @@
 #define MAX_DVFS_FREQS	18
 #define DVFS_RAIL_STATS_TOP_BIN	40
 
+#ifdef CONFIG_CMDLINE_OPTIONS
+/* cmdline_gpu vars&functions */
+extern unsigned int cmdline_gpuoc;
+extern int tegra_dvfs_set_gpuoc(int gpuoc_val);
+#endif
+
 struct clk;
 struct dvfs_rail;
 
@@ -106,6 +112,7 @@ struct dvfs {
 };
 
 extern struct dvfs_rail *tegra_cpu_rail;
+extern struct dentry *clk_debugfs_root;
 
 #ifdef CONFIG_TEGRA_SILICON_PLATFORM
 void tegra_soc_init_dvfs(void);
